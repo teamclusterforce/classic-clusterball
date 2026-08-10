@@ -14,6 +14,8 @@ limitations on current Windows versions. The Command Center takes over all of
 its duties and replaces the old `XDreamCC.ini`; an existing configuration is
 no longer required.
 
+![Command Center, Game tab](docs/screenshot-en.png)
+
 ### Features
 
 - Server list from the clusterball.de master server, with automatic refresh
