@@ -1,0 +1,6 @@
+# Build artifacts
+*.exe
+_release/
+
+# Local launcher configuration (contains account credentials)
+xdreamcc.cfg
