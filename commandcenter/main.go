@@ -27,8 +27,8 @@ import (
 var logoPNG []byte
 
 const (
-	appTitle   = "Clusterball.de Command Center"
-	appVersion = "2.0"
+	appTitle   = "Clusterball Re-Enhanced"
+	appVersion = "3.0"
 )
 
 // Weblinks. XDreamCC.ini fuehrte fuer die Registrierung noch register.php;
@@ -55,19 +55,10 @@ const (
 // groesser - sie wird als High-DPI-Asset eingebunden (siehe loadLogo).
 const logoWidth = 290
 
-// Hoechste Aufloesung, die das Spiel selbst kennt. Clusterball.exe enthaelt
-// genau drei Modi - "640 x 480", "800 x 600" und "1024 x 768" - mehr bietet
-// die Glide-Schnittstelle des Spiels nicht an. Der Launcher setzt deshalb
-// immer das Maximum; schaerfer wird das Bild ueber die Renderaufloesung des
-// Wrappers, nicht ueber diesen Wert.
-const (
-	gameResW = 1024
-	gameResH = 768
-)
-
-// Farbtiefe des Bildspeichers. Glide arbeitet mit 16 Bit - eine andere Tiefe
-// bietet die Schnittstelle nicht an, deshalb steht der Wert fest.
-const gameDepth = 16
+// Farbtiefe des Bildspeichers. Unter der Direct3D-Schicht nimmt das Spiel den
+// OpenGL-Pfad, und dort findet es unter aktuellem Windows nur Modi mit 32 Bit -
+// mit 16 Bit bricht es beim Start ab. Deshalb steht der Wert fest.
+const gameDepth = 32
 
 // Abstaende. Ein einziger Gutter fuer alle Aussenraender, damit nichts
 // mehr an der Fensterkante klebt.
@@ -91,28 +82,48 @@ var (
 	fontHint     = Font{Family: fontFamily, PointSize: 8, Italic: true}
 )
 
-var renderers = []string{"3dfx", "Direct3D", "OpenGL", "Software"}
-
 // Auswahllisten, deren Beschriftung uebersetzt wird, waehrend der gespeicherte
-// Wert gleich bleibt. Die Glide-Werte sind die von nGlide dokumentierten
-// Formen: "0"/"1" fuer die Vorgaben, sonst die Aufloesung als Text.
+// Wert gleich bleibt. Die Werte sind die der clusterball_d3d.ini.
 var (
-	depthValues       = []int{gameDepth} // nur 16 Bit, siehe gameDepth
-	qualityValues     = []int{0, 1, 2}
-	glideResValues    = []string{"0", "1", "1024x768", "1280x960", "1600x1200", "1920x1080"}
-	glideAspectValues = []string{"0", "1", "4:3"}
+	qualityValues = []int{0, 1, 2}
+	displayValues = []bool{true, false} // Vollbild, Fenster
+	resValues     = []string{"", "1280x720", "1600x900", "1920x1080", "2560x1440", "3840x2160"}
+	msaaValues    = []int{1, 2, 4, 8}
+	ssValues      = []int{1, 2}
+	anisoValues   = []int{1, 2, 4, 8, 16}
+	packValues    = []string{"", "hd", "hd16"}
 )
 
-func depthLabels() []string   { return []string{tr("set.depth16")} }
 func qualityLabels() []string { return []string{tr("set.qLow"), tr("set.qMid"), tr("set.qHigh")} }
-
-func glideResLabels() []string {
-	return []string{tr("set.glideResApp"), tr("set.glideResDsk"),
-		"1024 × 768", "1280 × 960", "1600 × 1200", "1920 × 1080"}
+func displayLabels() []string { return []string{tr("set.fullscreen"), tr("set.window")} }
+func msaaLabels() []string    { return []string{tr("set.off"), "2×", "4×", "8×"} }
+func ssLabels() []string      { return []string{tr("set.off"), "2×"} }
+func anisoLabels() []string   { return []string{tr("set.off"), "2×", "4×", "8×", "16×"} }
+func packLabels() []string {
+	return []string{tr("set.texOrig"), tr("set.texHD4"), tr("set.texHD16")}
 }
 
-func glideAspectLabels() []string {
-	return []string{tr("set.glideAspFit"), tr("set.glideAspApp"), tr("set.glideAsp43")}
+// resLabels beschriftet resValues; eine von Hand in die INI geschriebene
+// Auflösung steht als zusätzlicher Eintrag am Ende.
+func resLabels(values []string) []string {
+	out := make([]string, len(values))
+	for i, v := range values {
+		if v == "" {
+			out[i] = tr("set.resNative")
+			continue
+		}
+		out[i] = strings.Replace(v, "x", " × ", 1)
+	}
+	return out
+}
+
+func indexOfBool(list []bool, v bool) int {
+	for i, b := range list {
+		if b == v {
+			return i
+		}
+	}
+	return 0
 }
 
 func indexOfStr(list []string, v string) int {
@@ -149,25 +160,24 @@ type texts struct {
 
 	lblTableHint *walk.Label
 
-	setProgram    *walk.Label
 	setGraphics   *walk.Label
-	setRenderer   *walk.Label
+	setDisplay    *walk.Label
 	setResolution *walk.Label
-	resMaxHint    *walk.Label
-	setDepth      *walk.Label
+	setMSAA       *walk.Label
+	setSS         *walk.Label
+	setAniso      *walk.Label
+	setTexPack    *walk.Label
+	setSharpen    *walk.Label
+	d3dHint       *walk.Label
+	setGame       *walk.Label
 	setQuality    *walk.Label
 	setBrightness *walk.Label
+	setMouse      *walk.Label
 	setNetwork    *walk.Label
 	setMaster     *walk.Label
 	setLanguage   *walk.Label
 	gfxHint       *walk.Label
-	btnBrowse     *walk.PushButton
 	btnSave       *walk.PushButton
-
-	setGlide       *walk.Label
-	setGlideRes    *walk.Label
-	setGlideAspect *walk.Label
-	glideHint      *walk.Label
 
 	sbBrand *walk.StatusBarItem
 	sbForce *walk.StatusBarItem
@@ -206,29 +216,30 @@ type AppWindow struct {
 	chkExternalIP *walk.CheckBox
 
 	// Einstellungen
-	editCBPath   *walk.LineEdit
 	editServerIP *walk.LineEdit
-	cmbRenderer  *walk.ComboBox
-	editWidth    *walk.LineEdit
-	editHeight   *walk.LineEdit
 	radioDeutsch *walk.RadioButton
 	radioEnglish *walk.RadioButton
 
-	// Grafik des Spiels
-	cmbDepth      *walk.ComboBox
+	// Direct3D-Schicht
+	cmbDisplay *walk.ComboBox
+	cmbRes     *walk.ComboBox
+	resChoices []string // Werte hinter cmbRes, siehe resLabels
+	cmbMSAA    *walk.ComboBox
+	cmbSS      *walk.ComboBox
+	cmbAniso   *walk.ComboBox
+	cmbTexPack *walk.ComboBox
+	sldSharpen *walk.Slider
+	lblSharpen *walk.Label
+	chkVSync   *walk.CheckBox
+	chkFont    *walk.CheckBox
+	chkAO      *walk.CheckBox
+
+	// Spiel
 	cmbQuality    *walk.ComboBox
 	sldBrightness *walk.Slider
 	lblBrightness *walk.Label
-	chkAntialias  *walk.CheckBox
-	chkTrilinear  *walk.CheckBox
-	chkTex32      *walk.CheckBox
-	chkClamp      *walk.CheckBox
-
-	// nGlide
-	cmbGlideRes    *walk.ComboBox
-	cmbGlideAspect *walk.ComboBox
-	chkGlideVSync  *walk.CheckBox
-	chkGlideSplash *walk.CheckBox
+	sldMouse      *walk.Slider
+	lblMouse      *walk.Label
 
 	lblStatus *walk.StatusBarItem
 	lblClock  *walk.StatusBarItem
@@ -366,11 +377,11 @@ func (mw *AppWindow) build() error {
 	mw.applyConfig()
 	mw.showTab(tabSpiel)
 
-	// Ohne gueltige Clusterball.exe kann man nichts starten - dann direkt
-	// dort hinfuehren, wo man das geradebiegt.
+	// Der Launcher gehoert neben die Clusterball.exe. Liegt sie dort nicht,
+	// gibt es nichts einzustellen - nur den Hinweis, wohin er gehoert.
 	if !mw.cbExeOK() {
-		mw.showTab(tabEinstellungen)
-		mw.setStatus(tr("st.exeMissing"))
+		walk.MsgBox(mw.MainWindow, tr("dlg.error"), fmt.Sprintf(tr("dlg.notFound"), mw.cfg.CBExePath),
+			walk.MsgBoxIconWarning)
 	}
 
 	mw.refreshHostList()
@@ -397,13 +408,15 @@ func (mw *AppWindow) headerBar(logo *walk.Bitmap) Widget {
 			Composite{
 				Layout: VBox{MarginsZero: true, SpacingZero: true},
 				Children: []Widget{
+					// Neben dem Clusterball-Logo ergibt das den Namen
+					// "Clusterball Re-Enhanced".
 					Label{
-						Text:      "Command Center",
+						Text:      "Re-Enhanced",
 						TextColor: walk.RGB(255, 200, 0),
 						Font:      fontTitle,
 					},
 					Label{
-						Text:      "v" + appVersion + " · clusterball.de",
+						Text:      "Command Center · v" + appVersion + " · clusterball.de",
 						TextColor: walk.RGB(130, 160, 200),
 						Font:      fontSubtitle,
 					},
@@ -645,6 +658,42 @@ func (mw *AppWindow) serverList() Widget {
 // ── Tab: Einstellungen ────────────────────────────────────────────────────────
 
 func (mw *AppWindow) einstellungenPanel() Widget {
+	// combo baut eine Auswahlliste fester Breite, linksbuendig in ihrer Zelle.
+	combo := func(assign **walk.ComboBox, model []string, tip string) Widget {
+		return Composite{
+			Layout: HBox{MarginsZero: true, SpacingZero: true},
+			Children: []Widget{
+				ComboBox{AssignTo: assign, Model: model, Font: fontBody, ToolTipText: tip,
+					MinSize: Size{Width: 150}, MaxSize: Size{Width: 150}},
+				HSpacer{},
+			},
+		}
+	}
+	// slider baut einen Regler 0 … max mit Zahlenanzeige.
+	slider := func(assign **walk.Slider, label **walk.Label, lo, hi int) Widget {
+		return Composite{
+			Layout: HBox{MarginsZero: true, Spacing: gapS},
+			Children: []Widget{
+				Slider{
+					AssignTo: assign,
+					MinValue: lo,
+					MaxValue: hi,
+					MinSize:  Size{Width: 150},
+					MaxSize:  Size{Width: 150},
+					Tracking: true,
+					OnValueChanged: func() {
+						(*label).SetText(fmt.Sprintf("%d", (*assign).Value()))
+					},
+				},
+				Label{AssignTo: label, Text: "0", Font: fontBody, MinSize: Size{Width: 28}},
+				HSpacer{},
+			},
+		}
+	}
+	hint := func(assign **walk.Label, key string) Widget {
+		return Label{AssignTo: assign, Text: tr(key), Font: fontHint, TextColor: walk.RGB(120, 125, 135)}
+	}
+
 	return Composite{
 		AssignTo: &mw.panelEinstellungen,
 		Visible:  false,
@@ -654,179 +703,66 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 				Layout: HBox{MarginsZero: true, Spacing: 24},
 				Children: []Widget{
 
-					// Linke Spalte. HNear, sonst zentriert walk jede Zeile
-					// einzeln in der Spaltenbreite - Checkboxen stehen dann
-					// versetzt zueinander statt bündig.
+					// Linke Spalte: Direct3D-Schicht. HNear, sonst zentriert walk
+					// jede Zeile einzeln in der Spaltenbreite - Checkboxen stehen
+					// dann versetzt zueinander statt bündig.
 					Composite{
 						Layout: VBox{MarginsZero: true, Spacing: gapS, Alignment: AlignHNearVNear},
 						Children: []Widget{
-							Label{AssignTo: &mw.t.setProgram, Text: tr("set.program"), Font: fontHeading},
-							Composite{
-								Layout: HBox{MarginsZero: true, Spacing: 4},
-								Children: []Widget{
-									LineEdit{AssignTo: &mw.editCBPath, Text: mw.cfg.CBExePath, Font: fontBody},
-									PushButton{
-										AssignTo:    &mw.t.btnBrowse,
-										Text:        tr("set.browse"),
-										Font:        fontBody,
-										MinSize:     Size{Width: 110, Height: 22},
-										MaxSize:     Size{Width: 110, Height: 22},
-										ToolTipText: tr("set.browseTip"),
-										OnClicked:   func() { mw.browseCBExe() },
-									},
-								},
-							},
-							VSpacer{Size: gapS},
+							// Alles hier landet in der clusterball_d3d.ini,
+							// siehe writeD3DSettings.
 							Label{AssignTo: &mw.t.setGraphics, Text: tr("set.graphics"), Font: fontHeading},
 							Composite{
 								Layout: Grid{Columns: 2, MarginsZero: true, Spacing: gapS},
 								Children: []Widget{
-									Label{AssignTo: &mw.t.setRenderer, Text: tr("set.renderer"), Font: fontBody},
-									Composite{
-										Layout: HBox{MarginsZero: true, SpacingZero: true},
-										Children: []Widget{
-											ComboBox{
-												AssignTo: &mw.cmbRenderer,
-												Model:    renderers,
-												Font:     fontBody,
-												MinSize:  Size{Width: 130},
-												MaxSize:  Size{Width: 130},
-												// Die nGlide-Optionen greifen nur
-												// im Glide-Pfad.
-												OnCurrentIndexChanged: func() { mw.updateGlideEnabled() },
-											},
-											HSpacer{},
-										},
-									},
+									Label{AssignTo: &mw.t.setDisplay, Text: tr("set.display"), Font: fontBody},
+									combo(&mw.cmbDisplay, displayLabels(), ""),
 									Label{AssignTo: &mw.t.setResolution, Text: tr("set.resolution"), Font: fontBody,
 										ToolTipText: tr("set.resolutionTip")},
-									// Gesperrt: der Launcher setzt immer das Maximum,
-									// das das Spiel kennt.
-									Composite{
-										Layout: HBox{MarginsZero: true, Spacing: gapS},
-										Children: []Widget{
-											LineEdit{AssignTo: &mw.editWidth, Font: fontBody,
-												ReadOnly: true, Enabled: false,
-												ToolTipText: tr("set.resolutionTip"),
-												MinSize:     Size{Width: 58}, MaxSize: Size{Width: 58}},
-											Label{Text: "×", Font: fontBody},
-											LineEdit{AssignTo: &mw.editHeight, Font: fontBody,
-												ReadOnly: true, Enabled: false,
-												ToolTipText: tr("set.resolutionTip"),
-												MinSize:     Size{Width: 58}, MaxSize: Size{Width: 58}},
-											Label{AssignTo: &mw.t.resMaxHint, Text: tr("set.resolutionMax"),
-												Font: fontHint, TextColor: walk.RGB(120, 125, 135)},
-											HSpacer{},
-										},
-									},
-
-									// Gesperrt: Glide kennt nur 16 Bit.
-									Label{AssignTo: &mw.t.setDepth, Text: tr("set.depth"), Font: fontBody,
-										ToolTipText: tr("set.depthTip")},
-									Composite{
-										Layout: HBox{MarginsZero: true, SpacingZero: true},
-										Children: []Widget{
-											ComboBox{
-												AssignTo:    &mw.cmbDepth,
-												Model:       depthLabels(),
-												Font:        fontBody,
-												Enabled:     false,
-												ToolTipText: tr("set.depthTip"),
-												MinSize:     Size{Width: 130},
-												MaxSize:     Size{Width: 130},
-											},
-											HSpacer{},
-										},
-									},
-
-									Label{AssignTo: &mw.t.setQuality, Text: tr("set.quality"), Font: fontBody},
-									Composite{
-										Layout: HBox{MarginsZero: true, SpacingZero: true},
-										Children: []Widget{
-											ComboBox{
-												AssignTo: &mw.cmbQuality,
-												Model:    qualityLabels(),
-												Font:     fontBody,
-												MinSize:  Size{Width: 130},
-												MaxSize:  Size{Width: 130},
-											},
-											HSpacer{},
-										},
-									},
-
-									Label{AssignTo: &mw.t.setBrightness, Text: tr("set.brightness"), Font: fontBody},
-									Composite{
-										Layout: HBox{MarginsZero: true, Spacing: gapS},
-										Children: []Widget{
-											Slider{
-												AssignTo: &mw.sldBrightness,
-												MinValue: 0,
-												MaxValue: 100,
-												MinSize:  Size{Width: 130},
-												MaxSize:  Size{Width: 130},
-												Tracking: true,
-												OnValueChanged: func() {
-													mw.lblBrightness.SetText(fmt.Sprintf("%d", mw.sldBrightness.Value()))
-												},
-											},
-											Label{AssignTo: &mw.lblBrightness, Text: "0", Font: fontBody,
-												MinSize: Size{Width: 28}},
-											HSpacer{},
-										},
-									},
+									combo(&mw.cmbRes, resLabels(resValues), tr("set.resolutionTip")),
+									Label{AssignTo: &mw.t.setMSAA, Text: tr("set.msaa"), Font: fontBody},
+									combo(&mw.cmbMSAA, msaaLabels(), ""),
+									Label{AssignTo: &mw.t.setSS, Text: tr("set.ss"), Font: fontBody,
+										ToolTipText: tr("set.ssTip")},
+									combo(&mw.cmbSS, ssLabels(), tr("set.ssTip")),
+									Label{AssignTo: &mw.t.setAniso, Text: tr("set.aniso"), Font: fontBody},
+									combo(&mw.cmbAniso, anisoLabels(), ""),
+									Label{AssignTo: &mw.t.setTexPack, Text: tr("set.texPack"), Font: fontBody,
+										ToolTipText: tr("set.texPackTip")},
+									combo(&mw.cmbTexPack, packLabels(), tr("set.texPackTip")),
+									Label{AssignTo: &mw.t.setSharpen, Text: tr("set.sharpen"), Font: fontBody},
+									slider(&mw.sldSharpen, &mw.lblSharpen, 0, 100),
 								},
 							},
-
-							CheckBox{AssignTo: &mw.chkAntialias, Text: tr("set.antialias"), Font: fontBody},
-							CheckBox{AssignTo: &mw.chkTrilinear, Text: tr("set.trilinear"), Font: fontBody},
-							CheckBox{AssignTo: &mw.chkTex32, Text: tr("set.tex32"), Font: fontBody},
-							CheckBox{AssignTo: &mw.chkClamp, Text: tr("set.clamp"), Font: fontBody},
-							Label{
-								AssignTo:  &mw.t.gfxHint,
-								Text:      tr("set.gfxHint"),
-								Font:      fontHint,
-								TextColor: walk.RGB(120, 125, 135),
-							},
+							CheckBox{AssignTo: &mw.chkVSync, Text: tr("set.vsync"), Font: fontBody},
+							CheckBox{AssignTo: &mw.chkFont, Text: tr("set.font"), Font: fontBody,
+								ToolTipText: tr("set.fontTip")},
+							CheckBox{AssignTo: &mw.chkAO, Text: tr("set.ao"), Font: fontBody,
+								ToolTipText: tr("set.aoTip")},
+							hint(&mw.t.d3dHint, "set.d3dHint"),
 						},
 					},
 
-					// Rechte Spalte
+					// Rechte Spalte: Spiel, Netzwerk, Sprache
 					Composite{
 						Layout: VBox{MarginsZero: true, Spacing: gapS, Alignment: AlignHNearVNear},
 						Children: []Widget{
-							// Das mitgelieferte glide2x.dll ist nGlide 2.1. Seine
-							// Einstellungen gehen als Umgebungsvariablen an den
-							// Spielprozess, siehe glideEnv.
-							Label{AssignTo: &mw.t.setGlide, Text: tr("set.glide"), Font: fontHeading},
+							// Detailstufe und Helligkeit stehen in der config.cfg
+							// des Spiels, die Maus in der clusterball_d3d.ini.
+							Label{AssignTo: &mw.t.setGame, Text: tr("set.game"), Font: fontHeading},
 							Composite{
 								Layout: Grid{Columns: 2, MarginsZero: true, Spacing: gapS},
 								Children: []Widget{
-									Label{AssignTo: &mw.t.setGlideRes, Text: tr("set.glideRes"), Font: fontBody,
-										ToolTipText: tr("set.glideResTip")},
-									ComboBox{
-										AssignTo:    &mw.cmbGlideRes,
-										Model:       glideResLabels(),
-										Font:        fontBody,
-										ToolTipText: tr("set.glideResTip"),
-										MinSize:     Size{Width: 150}, MaxSize: Size{Width: 150},
-									},
-									Label{AssignTo: &mw.t.setGlideAspect, Text: tr("set.glideAspect"), Font: fontBody},
-									ComboBox{
-										AssignTo: &mw.cmbGlideAspect,
-										Model:    glideAspectLabels(),
-										Font:     fontBody,
-										MinSize:  Size{Width: 150}, MaxSize: Size{Width: 150},
-									},
+									Label{AssignTo: &mw.t.setQuality, Text: tr("set.quality"), Font: fontBody},
+									combo(&mw.cmbQuality, qualityLabels(), ""),
+									Label{AssignTo: &mw.t.setBrightness, Text: tr("set.brightness"), Font: fontBody},
+									slider(&mw.sldBrightness, &mw.lblBrightness, 0, 100),
+									Label{AssignTo: &mw.t.setMouse, Text: tr("set.mouse"), Font: fontBody,
+										ToolTipText: tr("set.mouseTip")},
+									slider(&mw.sldMouse, &mw.lblMouse, 5, 100),
 								},
 							},
-							CheckBox{AssignTo: &mw.chkGlideVSync, Text: tr("set.glideVSync"), Font: fontBody},
-							CheckBox{AssignTo: &mw.chkGlideSplash, Text: tr("set.glideSplash"), Font: fontBody},
-							Label{
-								AssignTo:  &mw.t.glideHint,
-								Text:      tr("set.glideOnly3dfx"),
-								Font:      fontHint,
-								TextColor: walk.RGB(120, 125, 135),
-							},
+							hint(&mw.t.gfxHint, "set.gfxHint"),
 
 							VSpacer{Size: gapS},
 							Label{AssignTo: &mw.t.setNetwork, Text: tr("set.network"), Font: fontHeading},
@@ -936,32 +872,33 @@ func (mw *AppWindow) retranslate() {
 	// Die Typ-Spalte enthaelt uebersetzten Text ("Dedicated"), also neu zeichnen.
 	mw.hostModel.PublishRowsReset()
 
-	mw.t.setProgram.SetText(tr("set.program"))
 	mw.t.setGraphics.SetText(tr("set.graphics"))
-	mw.t.setRenderer.SetText(tr("set.renderer"))
+	mw.t.setDisplay.SetText(tr("set.display"))
 	mw.t.setResolution.SetText(tr("set.resolution"))
-	mw.t.setDepth.SetText(tr("set.depth"))
+	mw.t.setResolution.SetToolTipText(tr("set.resolutionTip"))
+	mw.cmbRes.SetToolTipText(tr("set.resolutionTip"))
+	mw.t.setMSAA.SetText(tr("set.msaa"))
+	mw.t.setSS.SetText(tr("set.ss"))
+	mw.t.setSS.SetToolTipText(tr("set.ssTip"))
+	mw.cmbSS.SetToolTipText(tr("set.ssTip"))
+	mw.t.setAniso.SetText(tr("set.aniso"))
+	mw.t.setTexPack.SetText(tr("set.texPack"))
+	mw.t.setTexPack.SetToolTipText(tr("set.texPackTip"))
+	mw.cmbTexPack.SetToolTipText(tr("set.texPackTip"))
+	mw.t.setSharpen.SetText(tr("set.sharpen"))
+	mw.chkVSync.SetText(tr("set.vsync"))
+	mw.chkFont.SetText(tr("set.font"))
+	mw.chkFont.SetToolTipText(tr("set.fontTip"))
+	mw.chkAO.SetText(tr("set.ao"))
+	mw.chkAO.SetToolTipText(tr("set.aoTip"))
+	mw.t.d3dHint.SetText(tr("set.d3dHint"))
+
+	mw.t.setGame.SetText(tr("set.game"))
 	mw.t.setQuality.SetText(tr("set.quality"))
 	mw.t.setBrightness.SetText(tr("set.brightness"))
-	mw.chkAntialias.SetText(tr("set.antialias"))
-	mw.chkTrilinear.SetText(tr("set.trilinear"))
-	mw.chkTex32.SetText(tr("set.tex32"))
-	mw.chkClamp.SetText(tr("set.clamp"))
+	mw.t.setMouse.SetText(tr("set.mouse"))
+	mw.t.setMouse.SetToolTipText(tr("set.mouseTip"))
 	mw.t.gfxHint.SetText(tr("set.gfxHint"))
-
-	mw.t.setResolution.SetToolTipText(tr("set.resolutionTip"))
-	mw.t.resMaxHint.SetText(tr("set.resolutionMax"))
-	mw.editWidth.SetToolTipText(tr("set.resolutionTip"))
-	mw.editHeight.SetToolTipText(tr("set.resolutionTip"))
-
-	mw.t.setGlide.SetText(tr("set.glide"))
-	mw.t.setGlideRes.SetText(tr("set.glideRes"))
-	mw.t.setGlideRes.SetToolTipText(tr("set.glideResTip"))
-	mw.cmbGlideRes.SetToolTipText(tr("set.glideResTip"))
-	mw.t.setGlideAspect.SetText(tr("set.glideAspect"))
-	mw.chkGlideVSync.SetText(tr("set.glideVSync"))
-	mw.chkGlideSplash.SetText(tr("set.glideSplash"))
-	mw.t.glideHint.SetText(tr("set.glideOnly3dfx"))
 
 	// Auswahllisten neu beschriften. SetModel setzt die Auswahl zurueck,
 	// deshalb Index merken und wiederherstellen.
@@ -970,16 +907,17 @@ func (mw *AppWindow) retranslate() {
 		cb.SetModel(labels)
 		cb.SetCurrentIndex(i)
 	}
-	refill(mw.cmbDepth, depthLabels())
+	refill(mw.cmbDisplay, displayLabels())
+	refill(mw.cmbRes, resLabels(mw.resChoices))
+	refill(mw.cmbMSAA, msaaLabels())
+	refill(mw.cmbSS, ssLabels())
+	refill(mw.cmbAniso, anisoLabels())
+	refill(mw.cmbTexPack, packLabels())
 	refill(mw.cmbQuality, qualityLabels())
-	refill(mw.cmbGlideRes, glideResLabels())
-	refill(mw.cmbGlideAspect, glideAspectLabels())
 
 	mw.t.setNetwork.SetText(tr("set.network"))
 	mw.t.setMaster.SetText(tr("set.master"))
 	mw.t.setLanguage.SetText(tr("set.language"))
-	mw.t.btnBrowse.SetText(tr("set.browse"))
-	mw.t.btnBrowse.SetToolTipText(tr("set.browseTip"))
 	mw.t.btnSave.SetText(tr("set.save"))
 	mw.t.btnSave.SetToolTipText(fmt.Sprintf(tr("set.saveTip"), configPath()))
 
@@ -1046,26 +984,13 @@ func (mw *AppWindow) showTab(tab int) {
 // ── Konfiguration ↔ Oberflaeche ───────────────────────────────────────────────
 
 func (mw *AppWindow) applyConfig() {
-	setText(mw.editCBPath, mw.cfg.CBExePath)
 	setText(mw.editServerIP, mw.cfg.ServerIP)
 	setText(mw.editOwnIP, mw.cfg.OwnIP)
 	setText(mw.editAccount, mw.cfg.AccountName)
 	setText(mw.editAccPassword, mw.cfg.AccountPassword)
-	setText(mw.editWidth, fmt.Sprintf("%d", mw.cfg.Width))
-	setText(mw.editHeight, fmt.Sprintf("%d", mw.cfg.Height))
 
 	if mw.chkExternalIP != nil {
 		mw.chkExternalIP.SetChecked(mw.cfg.UseExternalIP)
-	}
-	if mw.cmbRenderer != nil {
-		idx := 0
-		for i, r := range renderers {
-			if r == mw.cfg.Renderer {
-				idx = i
-				break
-			}
-		}
-		mw.cmbRenderer.SetCurrentIndex(idx)
 	}
 	// SetChecked loest kein OnClicked aus, der Sprachwechsel wird hier also
 	// nicht versehentlich angestossen.
@@ -1077,26 +1002,36 @@ func (mw *AppWindow) applyConfig() {
 		}
 	}
 
-	// Grafik des Spiels
-	if mw.cmbDepth != nil {
-		mw.cmbDepth.SetCurrentIndex(indexOfInt(depthValues, mw.cfg.Depth))
+	// Direct3D-Schicht
+	if mw.cmbDisplay != nil {
+		d := mw.cfg.D3D
+		mw.cmbDisplay.SetCurrentIndex(indexOfBool(displayValues, d.Fullscreen))
+		// Eine von Hand eingetragene Auflösung bleibt auswählbar.
+		mw.resChoices = append([]string(nil), resValues...)
+		if indexOfStr(mw.resChoices, d.Resolution) == 0 && d.Resolution != "" {
+			mw.resChoices = append(mw.resChoices, d.Resolution)
+		}
+		mw.cmbRes.SetModel(resLabels(mw.resChoices))
+		mw.cmbRes.SetCurrentIndex(indexOfStr(mw.resChoices, d.Resolution))
+		mw.cmbMSAA.SetCurrentIndex(indexOfInt(msaaValues, d.MSAA))
+		mw.cmbSS.SetCurrentIndex(indexOfInt(ssValues, d.SuperSample))
+		mw.cmbAniso.SetCurrentIndex(indexOfInt(anisoValues, d.Anisotropy))
+		mw.cmbTexPack.SetCurrentIndex(indexOfStr(packValues, d.TexturePack))
+		mw.sldSharpen.SetValue(clampInt(d.Sharpen, 0, 100))
+		mw.lblSharpen.SetText(fmt.Sprintf("%d", mw.sldSharpen.Value()))
+		mw.chkVSync.SetChecked(d.VSync)
+		mw.chkFont.SetChecked(d.FontReplace)
+		mw.chkAO.SetChecked(d.AmbientOcc)
+		mw.sldMouse.SetValue(clampInt(int(d.MouseScale*100+0.5), 5, 100))
+		mw.lblMouse.SetText(fmt.Sprintf("%d", mw.sldMouse.Value()))
+	}
+
+	// Spiel
+	if mw.cmbQuality != nil {
 		mw.cmbQuality.SetCurrentIndex(indexOfInt(qualityValues, mw.cfg.GraphicalQuality))
 		mw.sldBrightness.SetValue(clampInt(mw.cfg.Brightness, 0, 100))
 		mw.lblBrightness.SetText(fmt.Sprintf("%d", mw.sldBrightness.Value()))
-		mw.chkAntialias.SetChecked(mw.cfg.Antialias)
-		mw.chkTrilinear.SetChecked(mw.cfg.TrilinearMipmap)
-		mw.chkTex32.SetChecked(mw.cfg.Force32BitTex)
-		mw.chkClamp.SetChecked(mw.cfg.ClampTexture)
 	}
-
-	// nGlide
-	if mw.cmbGlideRes != nil {
-		mw.cmbGlideRes.SetCurrentIndex(indexOfStr(glideResValues, mw.cfg.GlideResolution))
-		mw.cmbGlideAspect.SetCurrentIndex(indexOfStr(glideAspectValues, mw.cfg.GlideAspect))
-		mw.chkGlideVSync.SetChecked(mw.cfg.GlideVSync)
-		mw.chkGlideSplash.SetChecked(mw.cfg.GlideSplash)
-	}
-	mw.updateGlideEnabled()
 }
 
 func clampInt(v, lo, hi int) int {
@@ -1107,31 +1042,6 @@ func clampInt(v, lo, hi int) int {
 		return hi
 	}
 	return v
-}
-
-// currentRenderer liefert den in der Auswahl stehenden Renderer.
-func (mw *AppWindow) currentRenderer() string {
-	if mw.cmbRenderer != nil {
-		if i := mw.cmbRenderer.CurrentIndex(); i >= 0 && i < len(renderers) {
-			return renderers[i]
-		}
-	}
-	return mw.cfg.Renderer
-}
-
-// updateGlideEnabled graut die nGlide-Optionen aus, wenn nicht ueber Glide
-// gerendert wird - dann laufen sie ins Leere.
-func (mw *AppWindow) updateGlideEnabled() {
-	on := mw.currentRenderer() == "3dfx"
-	if mw.cmbGlideRes == nil {
-		return // Fenster noch im Aufbau
-	}
-	mw.cmbGlideRes.SetEnabled(on)
-	mw.cmbGlideAspect.SetEnabled(on)
-	mw.chkGlideVSync.SetEnabled(on)
-	mw.chkGlideSplash.SetEnabled(on)
-	mw.t.setGlideRes.SetEnabled(on)
-	mw.t.setGlideAspect.SetEnabled(on)
 }
 
 func setText(le *walk.LineEdit, s string) {
@@ -1157,42 +1067,52 @@ func (mw *AppWindow) syncSpiel() {
 	}
 }
 
-func (mw *AppWindow) saveSettings() {
-	mw.cfg.CBExePath = text(mw.editCBPath)
+// readSettings uebernimmt alles, was in der Oberflaeche eingestellt ist, in
+// die Konfiguration. Der Spielstart ruft es ebenfalls auf: wer im
+// Einstellungen-Tab etwas aendert und sofort startet, bekommt genau das, auch
+// ohne vorher zu speichern.
+func (mw *AppWindow) readSettings() {
 	mw.cfg.ServerIP = text(mw.editServerIP)
 
-	if mw.cmbRenderer != nil {
-		if idx := mw.cmbRenderer.CurrentIndex(); idx >= 0 && idx < len(renderers) {
-			mw.cfg.Renderer = renderers[idx]
+	// Direct3D-Schicht
+	if mw.cmbDisplay != nil {
+		d := &mw.cfg.D3D
+		pick := func(cb *walk.ComboBox, n int) (int, bool) {
+			i := cb.CurrentIndex()
+			return i, i >= 0 && i < n
 		}
+		if i, ok := pick(mw.cmbDisplay, len(displayValues)); ok {
+			d.Fullscreen = displayValues[i]
+		}
+		if i, ok := pick(mw.cmbRes, len(mw.resChoices)); ok {
+			d.Resolution = mw.resChoices[i]
+		}
+		if i, ok := pick(mw.cmbMSAA, len(msaaValues)); ok {
+			d.MSAA = msaaValues[i]
+		}
+		if i, ok := pick(mw.cmbSS, len(ssValues)); ok {
+			d.SuperSample = ssValues[i]
+		}
+		if i, ok := pick(mw.cmbAniso, len(anisoValues)); ok {
+			d.Anisotropy = anisoValues[i]
+		}
+		if i, ok := pick(mw.cmbTexPack, len(packValues)); ok {
+			d.TexturePack = packValues[i]
+		}
+		d.Sharpen = mw.sldSharpen.Value()
+		d.VSync = mw.chkVSync.Checked()
+		d.FontReplace = mw.chkFont.Checked()
+		d.AmbientOcc = mw.chkAO.Checked()
+		d.MouseScale = float64(mw.sldMouse.Value()) / 100
 	}
-	// Auflösung wird nicht aus der Oberfläche gelesen - sie steht fest auf
-	// dem Maximum des Spiels.
-	mw.cfg.Width, mw.cfg.Height = gameResW, gameResH
 
-	// Grafik des Spiels. Die Farbtiefe steht fest und wird nicht abgefragt.
+	// Spiel. Die Farbtiefe steht fest und wird nicht abgefragt.
 	mw.cfg.Depth = gameDepth
 	if mw.cmbQuality != nil {
 		if i := mw.cmbQuality.CurrentIndex(); i >= 0 && i < len(qualityValues) {
 			mw.cfg.GraphicalQuality = qualityValues[i]
 		}
 		mw.cfg.Brightness = mw.sldBrightness.Value()
-		mw.cfg.Antialias = mw.chkAntialias.Checked()
-		mw.cfg.TrilinearMipmap = mw.chkTrilinear.Checked()
-		mw.cfg.Force32BitTex = mw.chkTex32.Checked()
-		mw.cfg.ClampTexture = mw.chkClamp.Checked()
-	}
-
-	// nGlide
-	if mw.cmbGlideRes != nil {
-		if i := mw.cmbGlideRes.CurrentIndex(); i >= 0 && i < len(glideResValues) {
-			mw.cfg.GlideResolution = glideResValues[i]
-		}
-		if i := mw.cmbGlideAspect.CurrentIndex(); i >= 0 && i < len(glideAspectValues) {
-			mw.cfg.GlideAspect = glideAspectValues[i]
-		}
-		mw.cfg.GlideVSync = mw.chkGlideVSync.Checked()
-		mw.cfg.GlideSplash = mw.chkGlideSplash.Checked()
 	}
 
 	mw.cfg.ServerMode = "arena"
@@ -1202,7 +1122,10 @@ func (mw *AppWindow) saveSettings() {
 		mw.cfg.Language = "de"
 	}
 	mw.syncSpiel()
+}
 
+func (mw *AppWindow) saveSettings() {
+	mw.readSettings()
 	if err := SaveConfig(&mw.cfg); err != nil {
 		walk.MsgBox(mw.MainWindow, tr("dlg.error"), err.Error(), walk.MsgBoxIconError)
 		return
@@ -1212,22 +1135,14 @@ func (mw *AppWindow) saveSettings() {
 	if err := writeGameSettings(&mw.cfg); err != nil {
 		walk.MsgBox(mw.MainWindow, tr("dlg.error"), fmt.Sprintf(tr("dlg.gameCfg"), err), walk.MsgBoxIconWarning)
 	}
-	// Werte zurueckschreiben, damit korrigierte Eingaben (z.B. "abc" als
-	// Breite) sofort sichtbar wieder auf dem gueltigen Stand stehen.
+	// Ebenso die Einstellungen der Direct3D-Schicht in deren INI.
+	if err := writeD3DSettings(&mw.cfg); err != nil {
+		walk.MsgBox(mw.MainWindow, tr("dlg.error"), fmt.Sprintf(tr("dlg.d3dCfg"), err), walk.MsgBoxIconWarning)
+	}
+	// Werte zurueckschreiben, damit korrigierte Eingaben sofort sichtbar
+	// wieder auf dem gueltigen Stand stehen.
 	mw.applyConfig()
 	mw.setStatus(tr("st.saved"))
-}
-
-func (mw *AppWindow) browseCBExe() {
-	dlg := new(walk.FileDialog)
-	dlg.Title = tr("dlg.pickExe")
-	dlg.Filter = tr("dlg.filterCB")
-	if cur := text(mw.editCBPath); cur != "" {
-		dlg.InitialDirPath = filepath.Dir(cur)
-	}
-	if ok, _ := dlg.ShowOpen(mw.MainWindow); ok {
-		mw.editCBPath.SetText(dlg.FilePath)
-	}
 }
 
 func (mw *AppWindow) cbExeOK() bool {
@@ -1241,7 +1156,7 @@ func (mw *AppWindow) cbExeOK() bool {
 // ── Aktionen ──────────────────────────────────────────────────────────────────
 
 func (mw *AppWindow) startGame() {
-	mw.syncSpiel()
+	mw.readSettings()
 	if err := SaveConfig(&mw.cfg); err != nil {
 		mw.setStatus(fmt.Sprintf(tr("st.cfgFailed"), err))
 	}
@@ -1250,7 +1165,7 @@ func (mw *AppWindow) startGame() {
 }
 
 func (mw *AppWindow) startDedicated() {
-	mw.syncSpiel()
+	mw.readSettings()
 	if err := SaveConfig(&mw.cfg); err != nil {
 		mw.setStatus(fmt.Sprintf(tr("st.cfgFailed"), err))
 	}
@@ -1303,7 +1218,7 @@ func (mw *AppWindow) joinSelectedServer() {
 	if !ok {
 		return
 	}
-	mw.syncSpiel()
+	mw.readSettings()
 	// Die Hostliste liefert nicht bei jedem Eintrag eine Adresse. Wenn eine
 	// drinsteht, wird sie als zuletzt gewaehlter Host vermerkt - mehr kann
 	// damit derzeit nicht passieren, weil das Spiel beim Start keinen
@@ -1459,6 +1374,16 @@ func launchCB(cfg *AppConfig, dedicated bool) {
 	if err := writeGameSettings(cfg); err != nil {
 		walk.MsgBox(nil, tr("dlg.error"), fmt.Sprintf(tr("dlg.gameCfg"), err), walk.MsgBoxIconWarning)
 	}
+	// Direct3D-Schicht, ihre Einstellungen und der Schrift-Ersatz. Ohne
+	// Schicht startet das Spiel nicht - dann lieber gar nicht.
+	fontErr, err := prepareGame(cfg)
+	if err != nil {
+		walk.MsgBox(nil, tr("dlg.error"), fmt.Sprintf(tr("dlg.layer"), err), walk.MsgBoxIconError)
+		return
+	}
+	if fontErr != nil {
+		walk.MsgBox(nil, tr("dlg.error"), fmt.Sprintf(tr("dlg.font"), fontErr), walk.MsgBoxIconWarning)
+	}
 
 	args := []string{"/host"}
 	if dedicated {
@@ -1466,7 +1391,6 @@ func launchCB(cfg *AppConfig, dedicated bool) {
 	}
 	cmd := exec.Command(exePath, args...)
 	cmd.Dir = filepath.Dir(exePath)
-	cmd.Env = glideEnv(cfg) // nGlide-Einstellungen nur fuer diesen Prozess
 	if err := cmd.Start(); err != nil {
 		walk.MsgBox(nil, tr("dlg.error"), err.Error(), walk.MsgBoxIconError)
 	}

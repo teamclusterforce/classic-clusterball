@@ -204,36 +204,31 @@ func TestReadGameSettingsUebernimmtAlles(t *testing.T) {
 	}
 }
 
-func TestGlideEnvSetztAlleVariablen(t *testing.T) {
-	cfg := AppConfig{
-		GlideResolution: "1920x1080",
-		GlideAspect:     "4:3",
-		GlideVSync:      true,
-		GlideSplash:     false,
+// writeGameSettings setzt Renderer und Farbtiefe, die das Spiel unter der
+// Schicht braucht, und laesst die Spielauflösung in Ruhe - die setzt die
+// Schicht.
+func TestWriteGameSettingsRendererUndFarbtiefe(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.cfg")
+	if err := os.WriteFile(path, []byte(beispielCfg), 0644); err != nil {
+		t.Fatalf("schreiben: %v", err)
 	}
-	env := glideEnv(&cfg)
-
-	will := map[string]string{
-		"NGLIDE_RESOLUTION": "1920x1080",
-		"NGLIDE_ASPECT":     "4:3",
-		"NGLIDE_VSYNC":      "1",
-		"NGLIDE_SPLASH":     "0",
+	cfg := defaultConfig
+	cfg.CBExePath = filepath.Join(dir, "Clusterball.exe")
+	if err := writeGameSettings(&cfg); err != nil {
+		t.Fatalf("writeGameSettings: %v", err)
 	}
-	for k, v := range will {
-		gefunden := false
-		for _, e := range env {
-			if e == k+"="+v {
-				gefunden = true
-				break
-			}
-		}
-		if !gefunden {
-			t.Errorf("%s=%s fehlt in der Umgebung", k, v)
-		}
+	g, err := LoadGameConfig(path)
+	if err != nil {
+		t.Fatalf("laden: %v", err)
 	}
-	// Die geerbte Umgebung muss erhalten bleiben, sonst startet das Spiel
-	// ohne PATH und SystemRoot.
-	if len(env) <= len(will) {
-		t.Errorf("Umgebung enthaelt nur %d Eintraege - geerbte fehlen", len(env))
+	if got := g.Int("depth", 0); got != 32 {
+		t.Errorf("depth = %d, erwartet 32", got)
+	}
+	if got := g.Int("renderer", 0); got != 4 {
+		t.Errorf("renderer = %d, erwartet 4 (OpenGL-Pfad)", got)
+	}
+	if got := g.Int("horiz_game_res", 0); got != 640 {
+		t.Errorf("horiz_game_res = %d, erwartet unverändert 640", got)
 	}
 }

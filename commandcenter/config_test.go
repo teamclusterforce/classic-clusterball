@@ -2,45 +2,18 @@ package main
 
 import "testing"
 
-func TestMigrationHebtRenderaufloesung(t *testing.T) {
-	// Konfiguration aus der Zeit vor configVersion 1: kein Versionseintrag,
-	// Renderauflösung auf nGlides Vorgabe "wie im Spiel".
-	cfg := AppConfig{GlideResolution: "0"}
-	migrateConfig(&cfg)
-
-	if cfg.GlideResolution != "1" {
-		t.Errorf("GlideResolution = %q, erwartet \"1\" (wie Desktop)", cfg.GlideResolution)
-	}
-	if cfg.Version != configVersion {
-		t.Errorf("Version = %d, erwartet %d", cfg.Version, configVersion)
-	}
-}
-
 func TestMigrationRespektiertBewussteWahl(t *testing.T) {
 	// Wer nach der Migration bewusst zurückstellt, hat die aktuelle Version
 	// gespeichert - das darf nicht erneut überschrieben werden.
 	cfg := AppConfig{
-		GlideResolution:  "0",
 		GraphicalQuality: 0,
 		Antialias:        false,
 		Version:          configVersion,
 	}
 	migrateConfig(&cfg)
 
-	if cfg.GlideResolution != "0" {
-		t.Errorf("Renderauflösung überschrieben: %q", cfg.GlideResolution)
-	}
 	if cfg.GraphicalQuality != 0 || cfg.Antialias {
 		t.Error("Bildqualität überschrieben, obwohl bewusst gesetzt")
-	}
-}
-
-func TestMigrationLaesstEigeneAufloesungInRuhe(t *testing.T) {
-	cfg := AppConfig{GlideResolution: "1920x1080"}
-	migrateConfig(&cfg)
-
-	if cfg.GlideResolution != "1920x1080" {
-		t.Errorf("gesetzte Auflösung verändert: %q", cfg.GlideResolution)
 	}
 }
 
@@ -73,9 +46,6 @@ func TestMigrationSetztBildqualitaet(t *testing.T) {
 }
 
 func TestVorgaben(t *testing.T) {
-	if defaultConfig.GlideResolution != "1" {
-		t.Errorf("Renderauflösung = %q, erwartet \"1\" (wie Desktop)", defaultConfig.GlideResolution)
-	}
 	if defaultConfig.Depth != gameDepth {
 		t.Errorf("Farbtiefe = %d, erwartet %d", defaultConfig.Depth, gameDepth)
 	}
@@ -87,14 +57,38 @@ func TestVorgaben(t *testing.T) {
 		t.Errorf("Detailstufe/Helligkeit falsch: %d / %d",
 			defaultConfig.GraphicalQuality, defaultConfig.Brightness)
 	}
+	// Direct3D: Vollbild in nativer Auflösung, scharfe Schrift an.
+	d := defaultConfig.D3D
+	if !d.Fullscreen || d.Resolution != "" || !d.FontReplace {
+		t.Errorf("Direct3D-Vorgaben falsch: %+v", d)
+	}
 }
 
-// Nur 16 Bit darf angeboten werden.
-func TestNurEineFarbtiefe(t *testing.T) {
-	if len(depthValues) != 1 || depthValues[0] != gameDepth {
-		t.Errorf("depthValues = %v, erwartet [%d]", depthValues, gameDepth)
+// Unter der Direct3D-Schicht startet das Spiel nur mit 32 Bit.
+func TestFarbtiefe32(t *testing.T) {
+	if gameDepth != 32 {
+		t.Errorf("gameDepth = %d, erwartet 32", gameDepth)
 	}
-	if len(depthLabels()) != len(depthValues) {
-		t.Errorf("%d Beschriftungen zu %d Werten", len(depthLabels()), len(depthValues))
+}
+
+// Jede Auswahlliste braucht zu jedem Wert eine Beschriftung.
+func TestAuswahllistenVollstaendig(t *testing.T) {
+	pairs := []struct {
+		name   string
+		values int
+		labels int
+	}{
+		{"Anzeige", len(displayValues), len(displayLabels())},
+		{"Auflösung", len(resValues), len(resLabels(resValues))},
+		{"Kantenglättung", len(msaaValues), len(msaaLabels())},
+		{"Supersampling", len(ssValues), len(ssLabels())},
+		{"Filterung", len(anisoValues), len(anisoLabels())},
+		{"Texturen", len(packValues), len(packLabels())},
+		{"Detailstufe", len(qualityValues), len(qualityLabels())},
+	}
+	for _, p := range pairs {
+		if p.values != p.labels {
+			t.Errorf("%s: %d Werte, %d Beschriftungen", p.name, p.values, p.labels)
+		}
 	}
 }

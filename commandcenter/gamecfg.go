@@ -143,9 +143,8 @@ func readGameSettings(cfg *AppConfig) {
 	if err != nil {
 		return
 	}
-	// Auflösung bewusst nicht uebernehmen: der Launcher setzt immer das
-	// Maximum des Spiels, ein niedrigerer Wert in der Datei ist genau das,
-	// was hier korrigiert werden soll.
+	// Die Auflösung gehoert nicht hierher: die Direct3D-Schicht setzt die
+	// Spielauflösung beim Start selbst (852 × 480 bei 16:9).
 	cfg.Depth = g.Int("depth", cfg.Depth)
 	cfg.GraphicalQuality = g.Int("graphicalQuality", cfg.GraphicalQuality)
 	cfg.Brightness = g.Int("brightness", cfg.Brightness)
@@ -155,9 +154,16 @@ func readGameSettings(cfg *AppConfig) {
 	cfg.ClampTexture = g.Bool("clamp_texture", cfg.ClampTexture)
 }
 
-// writeGameSettings schreibt Zugangsdaten und Grafikwerte in die config.cfg.
-// Der Renderer-Eintrag bleibt bewusst unangetastet: config.cfg zaehlt anders
-// als XDreamCC.ini, und ein falscher Index waere ein nicht startendes Spiel.
+// gameRenderer ist der Renderer-Eintrag der config.cfg fuer den OpenGL-Pfad,
+// den die Direct3D-Schicht bedient. Die Zaehlung ist die der Modustabelle
+// des Spiels, nicht die von XDreamCC.ini: mit dem dort ueblichen Wert 2 nimmt
+// das Spiel den 3dfx-Pfad, findet kein Glide und beendet sich gleich nach dem
+// Fensteraufbau.
+const gameRenderer = 4
+
+// writeGameSettings schreibt Zugangsdaten, Renderer und Grafikwerte in die
+// config.cfg. Renderer und Farbtiefe muessen stimmen, sonst startet das Spiel
+// unter der Direct3D-Schicht nicht, siehe gameRenderer und gameDepth.
 func writeGameSettings(cfg *AppConfig) error {
 	path := gameConfigPath(cfg)
 	if path == "" {
@@ -173,8 +179,7 @@ func writeGameSettings(cfg *AppConfig) error {
 		g.Set("player_password", cfg.AccountPassword)
 	}
 
-	g.SetInt("horiz_game_res", cfg.Width)
-	g.SetInt("vert_game_res", cfg.Height)
+	g.SetInt("renderer", gameRenderer)
 	g.SetInt("depth", cfg.Depth)
 	g.SetInt("graphicalQuality", cfg.GraphicalQuality)
 	g.SetInt("brightness", cfg.Brightness)
@@ -184,25 +189,4 @@ func writeGameSettings(cfg *AppConfig) error {
 	g.SetBool("clamp_texture", cfg.ClampTexture)
 
 	return g.Save(path)
-}
-
-// ── nGlide ───────────────────────────────────────────────────────────────────
-
-// Das mitgelieferte glide2x.dll ist nicht der 3dfx-Originaltreiber, sondern
-// nGlide 2.1 (Zeus Software) mit übernommener 3dfx-Versionsressource - daher
-// auch das 3dfx-Logo beim Start. nGlide liest seine Einstellungen in dieser
-// Reihenfolge: Umgebungsvariable, dann Registry, dann Vorgabe.
-//
-// Der Launcher setzt sie deshalb als Umgebungsvariablen nur fuer den
-// gestarteten Spielprozess: nichts wird global veraendert, andere Glide-Spiele
-// bleiben unberührt, und ein Zuruecknehmen erfordert kein Aufraeumen.
-func glideEnv(cfg *AppConfig) []string {
-	env := os.Environ()
-	add := func(k, v string) { env = append(env, k+"="+v) }
-
-	add("NGLIDE_RESOLUTION", cfg.GlideResolution)
-	add("NGLIDE_ASPECT", cfg.GlideAspect)
-	add("NGLIDE_VSYNC", boolStr(cfg.GlideVSync))
-	add("NGLIDE_SPLASH", boolStr(cfg.GlideSplash))
-	return env
 }
