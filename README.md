@@ -241,5 +241,5 @@ All included modules use permissive licenses (BSD-3-Clause or MIT) that are
 compatible with the Apache License; their license texts ship with the
 respective modules.
 
-Clusterball itself is a product of Daydream Software. This repository contains no
-game files and is not affiliated with the original rights holders.
+Clusterball itself is a product of Daydream Software. This project is not
+affiliated with the original rights holders.
