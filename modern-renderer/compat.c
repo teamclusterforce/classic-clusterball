@@ -89,32 +89,46 @@ void game_box(float *s, int *ox, int *oy) {
 
 static WNDPROC g_orig_proc;
 
+// Real client pixels -> game-space pixels (what the menus work in).
+static void client_to_game(int cx, int cy, int *x, int *y) {
+    float s; int ox, oy;
+    game_box(&s, &ox, &oy);
+    int cw, ch;
+    client_size(&cw, &ch);
+    float px = cx * (float)g_tw / cw, py = cy * (float)g_th / ch;
+    *x = (int)((px - ox) / s); *y = (int)((py - oy) / s);
+}
+
+// Native mouse (NativeMouse=1): while a menu shows the game's arrow, the Windows cursor is the mouse - shown, free
+// to leave the window, moving at Windows' speed - and the game's arrow is set to its position (see
+// native_menu_mouse). In flight the game steers with DirectInput deltas: the cursor is hidden and kept inside the
+// client area while the window is active, and released when it is not.
+int g_native_mouse;
+static int g_menu_native; // the native mouse is driving the menu right now
+static void update_clip(HWND w) {
+    if (GetForegroundWindow() == w && !g_menu_native) {
+        RECT r; POINT a = {0, 0}, b;
+        GetClientRect(w, &r);
+        b.x = r.right; b.y = r.bottom;
+        ClientToScreen(w, &a); ClientToScreen(w, &b);
+        RECT c = {a.x, a.y, b.x, b.y};
+        ClipCursor(&c);
+    } else {
+        ClipCursor(NULL);
+    }
+}
+
 // Mouse messages arrive in real client pixels; the menus expect game-space pixels.
 static LRESULT CALLBACK sub_proc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     if (m >= WM_MOUSEFIRST && m <= WM_MOUSELAST && m != WM_MOUSEWHEEL) {
-        float s; int ox, oy;
-        game_box(&s, &ox, &oy);
-        int cw, ch;
-        client_size(&cw, &ch);
-        float px = (short)LOWORD(lp) * (float)g_tw / cw, py = (short)HIWORD(lp) * (float)g_th / ch;
-        int x = (int)((px - ox) / s), y = (int)((py - oy) / s);
+        int x, y;
+        client_to_game((short)LOWORD(lp), (short)HIWORD(lp), &x, &y);
         lp = MAKELPARAM((WORD)(short)x, (WORD)(short)y);
     }
-    // The game moves its own cursor from DirectInput deltas; like in fullscreen, the system cursor is hidden and
-    // kept inside the client area while the window is active, and released when it is not.
-    if (m == WM_SETCURSOR && LOWORD(lp) == HTCLIENT) { SetCursor(NULL); return TRUE; }
+    if (m == WM_SETCURSOR && LOWORD(lp) == HTCLIENT) { SetCursor(g_menu_native ? LoadCursorA(NULL, IDC_ARROW) : NULL); return TRUE; }
     if (m == WM_ACTIVATE || m == WM_SETFOCUS || m == WM_KILLFOCUS || m == WM_SIZE || m == WM_MOVE) {
-        int active = (m == WM_ACTIVATE) ? LOWORD(wp) != WA_INACTIVE : (m == WM_KILLFOCUS ? 0 : GetForegroundWindow() == w);
-        if (active) {
-            RECT r; POINT a = {0, 0}, b;
-            GetClientRect(w, &r);
-            b.x = r.right; b.y = r.bottom;
-            ClientToScreen(w, &a); ClientToScreen(w, &b);
-            RECT c = {a.x, a.y, b.x, b.y};
-            ClipCursor(&c);
-        } else {
-            ClipCursor(NULL);
-        }
+        if (m == WM_KILLFOCUS || (m == WM_ACTIVATE && LOWORD(wp) == WA_INACTIVE)) ClipCursor(NULL);
+        else update_clip(w);
     }
     // Alt+Enter switches between borderless fullscreen and a framed window (the render size stays).
     if (m == WM_SYSKEYDOWN && wp == VK_RETURN && (lp & (1 << 29))) {
@@ -247,13 +261,15 @@ static int WINAPI my_GetSystemMetrics(int i) {
 }
 
 // The exe re-centres the cursor in "screen" coordinates of its fullscreen mode.
+long g_setcursor_calls; // per second, logged with the mouse statistics
 static BOOL WINAPI my_SetCursorPos(int x, int y) {
+    g_setcursor_calls++;
     if (g_main) {
         float s; int ox, oy;
         game_box(&s, &ox, &oy);
         int cw, ch;
         client_size(&cw, &ch);
-        POINT p = {(int)((ox + x * s) * cw / g_tw), (int)((oy + y * s) * ch / g_th)};
+        POINT p = {(int)((ox + (x + 0.5f) * s) * cw / g_tw), (int)((oy + (y + 0.5f) * s) * ch / g_th)}; // pixel centre
         ClientToScreen(g_main, &p);
         return SetCursorPos(p.x, p.y);
     }
@@ -400,6 +416,7 @@ static void dump_bmp(int sec) {
 
 // Test script (CB_SCRIPT=file): lines "<ms since first frame> <cmd> [args]" with the commands
 //   move <dx> <dy> | click | keydown <DIK> | keyup <DIK> | wheel <notches> | shot <name> | quit
+//   | findcur <x> <y> | cursor <x> <y> (Windows cursor to a game pixel) | gamecur (logs the game's arrow)
 typedef struct { DWORD ms; char cmd[12]; char arg[48]; } ScriptLine;
 static ScriptLine *g_script;
 static int g_script_n, g_script_pos;
@@ -463,6 +480,66 @@ static void script_load(void) {
     CloseHandle(CreateThread(NULL, 0, hang_watch, NULL, 0, NULL));
 }
 
+// findcur <x> <y> (test runs): looks through all committed writable memory for x and for y, each on its own, as
+// int32, int16, float or double, and logs the hits; every further call keeps only the earlier hits that hold the new
+// value. Finds where the game keeps its menu cursor.
+#define FC_MAX 65536
+typedef struct { DWORD addr; BYTE kind; } FcHit; // kind 0 int32, 1 int16, 2 float, 3 double
+static FcHit g_fc[2][FC_MAX];
+static int g_fc_n[2] = {-1, -1};
+static int fc_match(const BYTE *p, int kind, long v) {
+    switch (kind) {
+    case 0: return *(const LONG *)p == v;
+    case 1: return *(const SHORT *)p == v;
+    case 2: { float f = *(const float *)p; return f > v - 0.51f && f < v + 0.51f; }
+    default: { double d = *(const double *)p; return d > v - 0.51 && d < v + 0.51; }
+    }
+}
+static void fc_pass(int axis, long v) {
+    FcHit *h = g_fc[axis];
+    int n = 0;
+    if (g_fc_n[axis] < 0) {
+        // Copied block by block with ReadProcessMemory: memory another thread frees meanwhile fails the copy
+        // instead of faulting.
+        static BYTE buf[65536 + 8];
+        MEMORY_BASIC_INFORMATION mi;
+        for (BYTE *a = (BYTE *)0x10000; a < (BYTE *)0x7FFE0000 && VirtualQuery(a, &mi, sizeof mi); a = (BYTE *)mi.BaseAddress + mi.RegionSize) {
+            if (mi.State != MEM_COMMIT || (mi.Protect & (PAGE_GUARD | PAGE_NOACCESS)) ||
+                !(mi.Protect & (PAGE_READWRITE | PAGE_EXECUTE_READWRITE | PAGE_WRITECOPY)) || (BYTE *)mi.BaseAddress == (BYTE *)g_fc)
+                continue;
+            for (SIZE_T off = 0; off < mi.RegionSize && n < FC_MAX; off += 65536) {
+                BYTE *src = (BYTE *)mi.BaseAddress + off;
+                SIZE_T len = mi.RegionSize - off < 65536 ? mi.RegionSize - off : 65536, got = 0;
+                if (!ReadProcessMemory(GetCurrentProcess(), src, buf, len, &got) || got < 8) continue;
+                for (SIZE_T i = 0; i + 8 <= got && n < FC_MAX; i += 2)
+                    for (int k = 0; k < 4 && n < FC_MAX; k++) {
+                        if (k != 1 && (i & 3)) continue;
+                        if (fc_match(buf + i, k, v)) { h[n].addr = (DWORD)(ULONG_PTR)(src + i); h[n++].kind = (BYTE)k; }
+                    }
+            }
+        }
+    } else {
+        for (int i = 0; i < g_fc_n[axis]; i++) {
+            BYTE tmp[8];
+            SIZE_T got = 0;
+            if (ReadProcessMemory(GetCurrentProcess(), (void *)(ULONG_PTR)h[i].addr, tmp, 8, &got) && got == 8 &&
+                fc_match(tmp, h[i].kind, v))
+                h[n++] = h[i];
+        }
+    }
+    g_fc_n[axis] = n;
+    char line[1024];
+    int m = 0;
+    for (int i = 0; i < n && i < 40 && m < (int)sizeof line - 24; i++)
+        m += snprintf(line + m, sizeof line - m, " %08lx:%c", h[i].addr, "iwfd"[h[i].kind]);
+    line[m] = 0;
+    CLOG("findcur %c=%ld: %d hits:%s", axis ? 'y' : 'x', v, n, line);
+}
+static void find_cursor(long x, long y) {
+    fc_pass(0, x);
+    fc_pass(1, y);
+}
+
 static int script_tick(DWORD t) { // returns 1 when a named shot is due this frame
     int shot = 0;
     while (g_script_pos < g_script_n && g_script[g_script_pos].ms <= t) {
@@ -476,6 +553,9 @@ static int script_tick(DWORD t) { // returns 1 when a named shot is due this fra
         else if (!strcmp(s->cmd, "wheel")) { extern long g_inj_wheel; g_inj_wheel += a * 120; } // notches, + = up
         else if (!strcmp(s->cmd, "shot")) { snprintf(g_shot_name, sizeof g_shot_name, "%s", s->arg); shot = 1; }
         else if (!strcmp(s->cmd, "quit")) ExitProcess(0);
+        else if (!strcmp(s->cmd, "findcur")) find_cursor(a, b);
+        else if (!strcmp(s->cmd, "cursor")) my_SetCursorPos((int)a, (int)b); // Windows cursor to game pixel (a, b)
+        else if (!strcmp(s->cmd, "gamecur")) CLOG("game arrow at %d,%d", *(volatile SHORT *)0x65e1c4, *(volatile SHORT *)0x65e1c6);
         else if (!strcmp(s->cmd, "set")) { // set <name> <value>: change a backend setting at run time
             char key[32]; double v = 0;
             if (sscanf(s->arg, "%31s %lf", key, &v) == 2) { extern void backend_set(const char *, double); backend_set(key, v); }
@@ -699,6 +779,59 @@ static void inj_poll(LONG *dx, LONG *dy, int *button) {
     if (!a->dx && !a->dy) g_mq_head = (g_mq_head + 1) % 64;
 }
 
+// The game keeps its menu arrow at 0x65e1c4/0x65e1c6 (int16, game pixels) and adds the DirectInput deltas to it 1:1.
+// With the native mouse the deltas are replaced by exactly the step from the arrow to where the Windows cursor
+// stands. (Setting the arrow directly is not enough: the menus move their highlight only on mouse movement, and a
+// click would choose the item highlighted before.) Clicks count only while the cursor is over the game in the
+// foreground window. In test runs (script mode) the injected deltas stay, so scripts keep working.
+#define GAME_CUR_X (*(volatile SHORT *)0x65e1c4)
+#define GAME_CUR_Y (*(volatile SHORT *)0x65e1c6)
+extern DWORD g_cursor_seen;    // gld3d.c: when the game last drew its arrow
+extern int g_hide_game_cursor; // gld3d.c: leave the arrow out, the Windows cursor stands there
+static void native_menu_mouse(LONG *m, DWORD cb) {
+    int gw = g_mode_w ? g_mode_w : 640, gh = g_mode_h ? g_mode_h : 480;
+    int x = GAME_CUR_X, y = GAME_CUR_Y, inside = 0;
+    if (g_script_mode) return;
+    if (GetForegroundWindow() == g_main) {
+        POINT p;
+        int cw, ch;
+        GetCursorPos(&p);
+        ScreenToClient(g_main, &p);
+        client_size(&cw, &ch);
+        inside = p.x >= 0 && p.y >= 0 && p.x < cw && p.y < ch;
+        client_to_game(p.x, p.y, &x, &y);
+    }
+    if (!inside && cb > 12) memset((BYTE *)m + 12, 0, cb - 12); // buttons
+    x = x < 0 ? 0 : x >= gw ? gw - 1 : x;
+    y = y < 0 ? 0 : y >= gh ? gh - 1 : y;
+    m[0] = x - GAME_CUR_X;
+    m[1] = y - GAME_CUR_Y;
+}
+
+// Places the Windows cursor on the game's arrow, so switching to the native mouse does not make it jump.
+static void cursor_to_game_arrow(void) {
+    float s; int ox, oy;
+    game_box(&s, &ox, &oy);
+    int cw, ch;
+    client_size(&cw, &ch);
+    POINT p = {(int)((ox + (GAME_CUR_X + 0.5f) * s) * cw / g_tw), (int)((oy + (GAME_CUR_Y + 0.5f) * s) * ch / g_th)};
+    ClientToScreen(g_main, &p);
+    SetCursorPos(p.x, p.y);
+}
+
+static void native_mouse_mode(void) {
+    int menu = g_native_mouse && g_main && g_cursor_seen && GetTickCount() - g_cursor_seen < 250;
+    if (menu == g_menu_native) return;
+    g_menu_native = menu;
+    g_hide_game_cursor = menu && !g_script_mode; // test shots keep the game's arrow
+    if (menu && !g_script_mode && GetForegroundWindow() == g_main) cursor_to_game_arrow();
+    update_clip(g_main);
+    POINT p;
+    GetCursorPos(&p);
+    if (WindowFromPoint(p) == g_main) SetCursor(menu ? LoadCursorA(NULL, IDC_ARROW) : NULL);
+    CLOG("native mouse: %s", menu ? "menu (Windows cursor)" : "flight (captured)");
+}
+
 static HRESULT WINAPI my_GetDeviceState(void *self, DWORD cb, void *data) {
     HRESULT hr = real_GetDeviceState(self, cb, data);
     // In script mode the game must not see the real mouse/keyboard: DirectInput runs in background mode and would
@@ -713,6 +846,8 @@ static HRESULT WINAPI my_GetDeviceState(void *self, DWORD cb, void *data) {
         m[1] = scale_delta(m[1], &g_acc_y) + idy;
         if (ib && cb >= 16) ((BYTE *)data)[12] = 0x80;
         g_sum_x += labs(m[0]); g_sum_y += labs(m[1]); g_calls_state++;
+        native_mouse_mode();
+        if (g_menu_native) native_menu_mouse(m, cb);
         m[2] += g_inj_wheel; g_inj_wheel = 0;
         wheel_feed(m[2]);
     }
@@ -788,9 +923,12 @@ static HRESULT WINAPI my_DirectInputCreateA(HINSTANCE h, DWORD ver, void **di, v
 }
 
 void input_stats_tick(void) {
+    extern long g_setcursor_calls;
     if (g_mouse_dev && (g_calls_state || g_calls_data))
-        CLOG("mouse: |dx|=%ld |dy|=%ld per s, GetDeviceState %ld/s, GetDeviceData %ld/s", g_sum_x, g_sum_y, g_calls_state, g_calls_data);
+        CLOG("mouse: |dx|=%ld |dy|=%ld per s, GetDeviceState %ld/s, GetDeviceData %ld/s, SetCursorPos %ld/s", g_sum_x, g_sum_y,
+             g_calls_state, g_calls_data, g_setcursor_calls);
     g_sum_x = g_sum_y = g_calls_state = g_calls_data = 0;
+    g_setcursor_calls = 0;
 }
 
 void compat_init(void) {
@@ -806,6 +944,8 @@ void compat_init(void) {
         // DirectInput delivers raw counts and ignores the Windows pointer speed; apply it explicitly (speed 10 = 1.0,
         // the same table Windows uses without "enhance pointer precision"), times a base factor for this game.
         g_mouse_scale = cfg_num("CB_MOUSE", "MouseScale", 0.35);
+        g_native_mouse = cfg_num("CB_NATIVEMOUSE", "NativeMouse", 1) != 0;
+        CLOG("native mouse in the menus: %s", g_native_mouse ? "on" : "off");
         g_wheel_dik[0] = (int)cfg_num("CB_WHEELUP", "WheelUp", 0);
         g_wheel_dik[1] = (int)cfg_num("CB_WHEELDOWN", "WheelDown", 0);
         CLOG("mouse wheel: up -> key %d, down -> key %d", g_wheel_dik[0], g_wheel_dik[1]);

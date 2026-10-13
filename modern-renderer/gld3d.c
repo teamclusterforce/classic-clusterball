@@ -1016,6 +1016,28 @@ static void texlog_draw(const M4 *mvp, const Vtx *v, int n) {
     }
 }
 
+// The menu arrow: a 32 x 32 quad out of a dynamic texture whose top-left corner is the cursor position the game keeps
+// at 0x65e1c4/0x65e1c6 (int16, game pixels from the top; the 2D space here counts from the bottom). Drawing it tells
+// compat.c that a menu is open (g_cursor_seen); with the native mouse the Windows cursor takes its place.
+DWORD g_cursor_seen;
+int g_hide_game_cursor;
+static int is_cursor_quad(const M4 *mvp, const Vtx *v, int n) {
+    if (n != 6) return 0;
+    float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f;
+    for (int i = 0; i < n; i++) {
+        const float *m = mvp->m;
+        float cx = m[0] * v[i].x + m[4] * v[i].y + m[8] * v[i].z + m[12] * v[i].w;
+        float cy = m[1] * v[i].x + m[5] * v[i].y + m[9] * v[i].z + m[13] * v[i].w;
+        float cw = m[3] * v[i].x + m[7] * v[i].y + m[11] * v[i].z + m[15] * v[i].w;
+        if (cw == 0) cw = 1;
+        float gx = S.vx + (cx / cw * 0.5f + 0.5f) * S.vw, gy = S.vy + (cy / cw * 0.5f + 0.5f) * S.vh;
+        x0 = fminf(x0, gx); x1 = fmaxf(x1, gx); y0 = fminf(y0, gy); y1 = fmaxf(y1, gy);
+    }
+    float cx = *(volatile SHORT *)0x65e1c4, cy = *(volatile SHORT *)0x65e1c6;
+    return fabsf(x1 - x0 - 32) < 0.6f && fabsf(y1 - y0 - 32) < 0.6f && fabsf(x0 - cx) < 0.6f &&
+           fabsf(y1 - (S.vy + S.vh - cy)) < 0.6f;
+}
+
 // Pictures the game composes into a big dynamic texture and draws as a part of it (menu titles, "LADE ..."
 // and other text strips) go through the texture pack like whole textures: the drawn sub-rectangle is
 // hashed (size and pixels, as tex_hash), dumped as textures\dump\<hash>.png with TextureDump=1 and replaced
@@ -1256,6 +1278,10 @@ static void draw_list(D3D11_PRIMITIVE_TOPOLOGY topo, const Vtx *v, int n) {
         }
     }
     if (g_texlog > 0 && !proj_is_persp()) texlog_draw(&mvp, v, n);
+    if (c.tex[0] && !proj_is_persp() && is_cursor_quad(&mvp, v, n)) {
+        g_cursor_seen = GetTickCount();
+        if (g_hide_game_cursor) return;
+    }
     write_cb(&c);
     ID3D11DeviceContext_PSSetShaderResources(ctx, 0, 2, srv);
     ID3D11DeviceContext_PSSetSamplers(ctx, 0, 2, smp);

@@ -105,6 +105,11 @@ Because it sits exactly where the game draws, it does what a wrapper cannot:
 - **Mouse wheel:** the game has no wheel binding; the renderer turns each notch
   into a short press of a key (the launcher uses F11/F12), so it can put
   actions such as switching weapons on the wheel
+- **Windows mouse in the menus:** the game moves its own arrow from raw mouse
+  movement. While a menu shows it, the renderer feeds the game exactly the step
+  to where the Windows cursor stands (the arrow sits at `0x65e1c4`), shows the
+  Windows cursor in its place and lets the mouse leave the window; only in
+  flight is the mouse captured (`NativeMouse` in `clusterball_d3d.ini`)
 - **Fixes around the picture:** mouse via DirectInput with the Windows pointer
   speed, no self-minimising, no crash on the game's display-mode probing
   (uninitialised `DEVMODE`, 16-bit modes, oversized texture probe)
