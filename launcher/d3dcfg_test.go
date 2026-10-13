@@ -19,6 +19,21 @@ func TestVorlageErgibtVorgaben(t *testing.T) {
 	}
 }
 
+// Das 16-fach-Paket wird nicht mehr ausgeliefert: eine ältere INI, die es
+// noch wählt, bekommt das 4-fach-Paket.
+func TestHD16WirdHD(t *testing.T) {
+	dir := t.TempDir()
+	inhalt := "[d3d]\r\nTextureReplace=1\r\nTexturePack=hd16\r\n"
+	if err := os.WriteFile(filepath.Join(dir, d3dIniName), []byte(inhalt), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := AppConfig{CBExePath: filepath.Join(dir, "Clusterball.exe")}
+	readD3DSettings(&cfg)
+	if cfg.D3D.TexturePack != "hd" {
+		t.Errorf("TexturePack = %q, erwartet \"hd\"", cfg.D3D.TexturePack)
+	}
+}
+
 // Schreiben ändert nur die verwalteten Schlüssel; Werte, die von Hand
 // eingetragen wurden, bleiben stehen - auch solche, die die Vorlage nicht
 // kennt. Die Kommentare kommen aus der aktuellen Vorlage.

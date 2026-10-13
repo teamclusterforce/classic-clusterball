@@ -20,7 +20,7 @@ type D3DSettings struct {
 	Anisotropy  int     // anisotrope Filterung: 1 (aus) … 16
 	VSync       bool    // auf den Bildaufbau des Monitors warten
 	Sharpen     int     // Nachschärfen 0 … 100 (in der INI 0 … 1)
-	TexturePack string  // "" = Originaltexturen, "hd" = 4-fach, "hd16" = 16-fach
+	TexturePack string  // "" = Originaltexturen, "hd" = 4-fach
 	FontReplace bool    // Menü- und HUD-Schrift aus der Bahnschrift statt 8 × 8 Pixel
 	AmbientOcc  bool    // Umgebungsverdeckung
 	MouseScale  float64 // Grundfaktor der Mausbewegung
@@ -38,7 +38,7 @@ var defaultD3D = D3DSettings{
 	Anisotropy:  8,
 	VSync:       true,
 	Sharpen:     50,
-	TexturePack: "hd16",
+	TexturePack: "hd",
 	FontReplace: true,
 	AmbientOcc:  false,
 	MouseScale:  0.35,
@@ -195,6 +195,10 @@ func readD3DSettings(cfg *AppConfig) {
 		d.TexturePack = ""
 	} else if v, ok := ini.Get("TexturePack"); ok && v != "" {
 		d.TexturePack = v
+	}
+	// Das 16-fach-Paket wird nicht mehr ausgeliefert; ältere INIs bekommen das 4-fach-Paket.
+	if d.TexturePack == "hd16" {
+		d.TexturePack = "hd"
 	}
 	d.FontReplace = ini.Bool("FontReplace", d.FontReplace)
 	d.AmbientOcc = ini.Bool("AmbientOcclusion", d.AmbientOcc)

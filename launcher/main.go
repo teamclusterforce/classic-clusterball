@@ -91,7 +91,7 @@ var (
 	msaaValues    = []int{1, 2, 4, 8}
 	ssValues      = []int{1, 2}
 	anisoValues   = []int{1, 2, 4, 8, 16}
-	packValues    = []string{"", "hd", "hd16"}
+	packValues    = []string{"", "hd"}
 )
 
 func qualityLabels() []string { return []string{tr("set.qLow"), tr("set.qMid"), tr("set.qHigh")} }
@@ -100,7 +100,7 @@ func msaaLabels() []string    { return []string{tr("set.off"), "2×", "4×", "8�
 func ssLabels() []string      { return []string{tr("set.off"), "2×"} }
 func anisoLabels() []string   { return []string{tr("set.off"), "2×", "4×", "8×", "16×"} }
 func packLabels() []string {
-	return []string{tr("set.texOrig"), tr("set.texHD4"), tr("set.texHD16")}
+	return []string{tr("set.texOrig"), tr("set.texHD4")}
 }
 
 // resLabels beschriftet resValues; eine von Hand in die INI geschriebene
