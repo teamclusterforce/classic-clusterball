@@ -273,9 +273,10 @@ static int g_ao_on = 1;
 static float g_ao_strength = 0.6f, g_ao_radius = 200.f; // radius in world units (100 = 1 m)
 
 static M4 g_ao_proj;
+static float g_ao_fog[4]; // fog of the scene's depth-writing draws: start, end, density, mode (as CB.fogp)
 
 static const char *k_post_hlsl =
-    "cbuffer P : register(b1) { float4 grade; float4 aop; float4 aop2; };\n"
+    "cbuffer P : register(b1) { float4 grade; float4 aop; float4 aop2; float4 aofog; };\n"
     "Texture2D src : register(t0);\n"
     "#if MS > 1\n"
     "Texture2DMS<float> dep : register(t1);\n"
@@ -310,10 +311,18 @@ static const char *k_post_hlsl =
     "  return float4(e, 1); }\n"
     // aop = near, far, focal length in pixels, radius; aop2 = strength, target width, height
     "float lin(float d) { float z = d * 2 - 1; return 2 * aop.x * aop.y / ((aop.y + aop.x) - z * (aop.y - aop.x)); }\n"
+    // How much of a surface at eye distance z the fog leaves visible, as in vsmain. Geometry the fog has swallowed
+    // (distant terrain and arena walls drawn in the haze colour) still fills the depth buffer; without this its edges
+    // would show up as grey bands in the sky.
+    "float fogvis(float z) {\n"
+    "  if (aofog.w == 1) return saturate((aofog.y - z) / (aofog.y - aofog.x));\n"
+    "  if (aofog.w == 2) return saturate(exp(-aofog.z * z));\n"
+    "  if (aofog.w == 3) return saturate(exp(-(aofog.z * z) * (aofog.z * z)));\n"
+    "  return 1; }\n"
     "float psao(float4 pos : SV_Position) : SV_Target {\n"
     "  int2 p = int2(pos.xy); int2 lim = int2(aop2.y - 1, aop2.z - 1);\n"
     "  float d = depthAt(p); if (d >= 0.99999) return 1;\n"
-    "  float z = lin(d);\n"
+    "  float z = lin(d), vis = fogvis(z); if (vis < 0.01) return 1;\n"
     // local plane from the neighbours, so flat ground seen at a grazing angle does not occlude itself
     "  float zx = lin(depthAt(min(p + int2(1, 0), lim))) - z, zy = lin(depthAt(min(p + int2(0, 1), lim))) - z;\n"
     "  if (abs(zx) > aop.w || abs(zy) > aop.w) { zx = 0; zy = 0; }\n"
@@ -326,14 +335,14 @@ static const char *k_post_hlsl =
     "    int2 q = clamp(p + int2(o), int2(0, 0), lim);\n"
     "    float expect = z + o.x * zx + o.y * zy, diff = expect - lin(depthAt(q));\n"
     "    occ += (diff > aop.w * 0.05 && diff < aop.w * 3) ? saturate(diff / aop.w) : 0; }\n"
-    "  return 1 - aop2.x * occ / 12; }\n"
+    "  return 1 - aop2.x * vis * occ / 12; }\n"
     "float4 psaoblur(float4 pos : SV_Position) : SV_Target {\n"
     "  int2 p = int2(pos.xy); float s = 0;\n"
     "  [unroll] for (int y = -2; y < 2; y++) [unroll] for (int x = -2; x < 2; x++) s += aot.Load(int3(p + int2(x, y), 0));\n"
     "  s /= 16; return float4(s, s, s, 1); }\n";
 
 static void write_pbuf(void) {
-    float pc[12] = {g_contrast, g_saturation, g_gamma, g_sharpen};
+    float pc[16] = {g_contrast, g_saturation, g_gamma, g_sharpen};
     M4 *p = &g_ao_proj;
     float m10 = p->m[10], m14 = p->m[14];
     pc[4] = m14 / (m10 - 1);                 // near
@@ -341,6 +350,7 @@ static void write_pbuf(void) {
     pc[6] = p->m[5] * rt_h * 0.5f;           // focal length in pixels
     pc[7] = g_ao_radius;
     pc[8] = g_ao_strength; pc[9] = (float)rt_w; pc[10] = (float)rt_h;
+    memcpy(pc + 12, g_ao_fog, sizeof g_ao_fog);
     D3D11_MAPPED_SUBRESOURCE m;
     if (SUCCEEDED(ID3D11DeviceContext_Map(ctx, (ID3D11Resource *)pbuf, 0, D3D11_MAP_WRITE_DISCARD, 0, &m))) {
         memcpy(m.pData, pc, sizeof pc);
@@ -589,7 +599,7 @@ static int create_device(HWND hwnd) {
         for (int i = 0; i < 5; i++) ID3D10Blob_Release(b[i]);
         D3D11_BUFFER_DESC pd;
         memset(&pd, 0, sizeof pd);
-        pd.ByteWidth = 48; pd.Usage = D3D11_USAGE_DYNAMIC;
+        pd.ByteWidth = 64; pd.Usage = D3D11_USAGE_DYNAMIC;
         pd.BindFlags = D3D11_BIND_CONSTANT_BUFFER; pd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         ID3D11Device_CreateBuffer(dev, &pd, NULL, &pbuf);
     }
@@ -1128,6 +1138,7 @@ static void draw_list(D3D11_PRIMITIVE_TOPOLOGY topo, const Vtx *v, int n) {
     memcpy(c.fogcolor, S.fogcolor, 16);
     c.fogp[0] = S.fogstart; c.fogp[1] = S.fogend; c.fogp[2] = S.fogdens;
     c.fogp[3] = !S.fog_on ? 0 : S.fogmode == 0x2601 ? 1 : S.fogmode == 0x801 ? 3 : 2;
+    if (proj_is_persp() && S.depth_on && S.dmask) memcpy(g_ao_fog, c.fogp, sizeof g_ao_fog); // see fogvis
     c.alpha[0] = S.aref; c.alpha[1] = (float)(S.afunc & 7); c.alpha[2] = S.alpha_on ? 1.f : 0.f;
     ID3D11ShaderResourceView *srv[2] = {NULL, NULL};
     ID3D11SamplerState *smp[2] = {NULL, NULL};
