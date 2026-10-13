@@ -5,6 +5,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
 	"github.com/lxn/win"
@@ -104,6 +106,47 @@ func (mw *AppWindow) ctaButton(assign **walk.CustomWidget, key string, height in
 			pressed = false
 			(*assign).Invalidate()
 			onClick()
+		},
+	}
+}
+
+// langWidget ist der Sprachumschalter rechts in der Reiterleiste: "DE  EN",
+// die aktive Sprache weiss und fett. Ein Klick auf die linke Haelfte waehlt
+// Deutsch, auf die rechte Englisch.
+func (mw *AppWindow) langWidget() Widget {
+	const width = 76
+	return CustomWidget{
+		AssignTo:            &mw.langToggle,
+		MinSize:             Size{Width: width, Height: tabBarHeight},
+		MaxSize:             Size{Width: width, Height: tabBarHeight},
+		DoubleBuffering:     true,
+		InvalidatesOnResize: true,
+		ToolTipText:         "Sprache / Language",
+		Paint: func(c *walk.Canvas, _ walk.Rectangle) error {
+			b := mw.langToggle.ClientBounds()
+			c.FillRectangle(brushOf(colTabBar), b)
+			half := b.Width / 2
+			for i, l := range []string{"de", "en"} {
+				r := walk.Rectangle{X: b.X + i*half, Y: b.Y, Width: half, Height: b.Height}
+				font, col := mw.fontTabInactive, colTabText
+				if currentLang == l {
+					font, col = mw.fontTabActive, colTabActive
+					c.FillRectangle(brushOf(colAccent), walk.Rectangle{X: r.X + 8, Y: r.Y + r.Height - 3, Width: r.Width - 16, Height: 3})
+				}
+				c.DrawText(strings.ToUpper(l), font, col, r, walk.TextCenter|walk.TextVCenter|walk.TextSingleLine)
+			}
+			// feiner Trennstrich zwischen beiden
+			return c.FillRectangle(brushOf(colTabText), walk.Rectangle{X: b.X + half, Y: b.Y + 13, Width: 1, Height: b.Height - 26})
+		},
+		OnMouseUp: func(x, y int, button walk.MouseButton) {
+			if button != walk.LeftButton {
+				return
+			}
+			if x < mw.langToggle.ClientBoundsPixels().Width/2 {
+				mw.switchLanguage("de")
+			} else {
+				mw.switchLanguage("en")
+			}
 		},
 	}
 }

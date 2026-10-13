@@ -26,13 +26,16 @@ import (
 	xdraw "golang.org/x/image/draw"
 )
 
-// Beide aus assets/cmd/launcherlogo.
+// Alle aus assets/cmd/launcherlogo.
 //
 //go:embed logo_cb.png
 var logoPNG []byte
 
 //go:embed logo_cf.png
 var logoCFPNG []byte
+
+//go:embed logo_cbde.png
+var logoCBDEPNG []byte
 
 const (
 	appTitle   = "Clusterball Re-Enhanced"
@@ -43,13 +46,13 @@ const (
 // hier bleibt die neuere Adresse aus dem bisherigen Launcher-Code.
 const (
 	registerURL = "http://www.clusterball.de/registrieren/"
-	supportURL  = "http://www.clusterball.de/support.php"
 	forceURL    = "https://www.clusterforce.net"
 )
 
 const (
 	tabSpiel         = 0
 	tabEinstellungen = 1
+	tabHilfe         = 2
 )
 
 // Feste Hoehen der Kopfbereiche. Beide Composites werden auf exakt diese
@@ -62,8 +65,9 @@ const (
 // Logische Hoehe der Logos in der Kopfleiste. Die PNG-Dateien sind 240 px
 // hoch - sie werden als High-DPI-Assets eingebunden (siehe loadLogo).
 const (
-	logoHeight   = 56
-	logoCFHeight = 40
+	logoHeight     = 56
+	logoCFHeight   = 40
+	logoCBDEHeight = 40
 )
 
 const siteURL = "http://www.clusterball.de"
@@ -194,7 +198,6 @@ type texts struct {
 	setMouse      *walk.Label
 	setNetwork    *walk.Label
 	setMaster     *walk.Label
-	setLanguage   *walk.Label
 	gfxHint       *walk.Label
 	btnSave       *walk.PushButton
 
@@ -209,14 +212,18 @@ type AppWindow struct {
 	// Panels
 	panelSpiel         *walk.Composite
 	panelEinstellungen *walk.Composite
+	panelHilfe         *walk.Composite
+	help               *helpView
 
 	// Reiter (ui.go) und Schriften der selbst gezeichneten Teile
 	tabs            []*tabItem
 	fontTabActive   *walk.Font
 	fontTabInactive *walk.Font
 	fontCTA         *walk.Font
+	langToggle      *walk.CustomWidget // DE | EN rechts in der Reiterleiste
 
 	imgCF         *walk.ImageView // Team ClusterForce, verlinkt
+	imgCBDE       *walk.ImageView // clusterball.de, verlinkt
 	emptyState    *walk.Composite // statt der Tabelle, solange kein Server online ist
 	lblGfxSummary *walk.Label     // Grafik-Kurzuebersicht im Spiel-Reiter
 
@@ -238,8 +245,6 @@ type AppWindow struct {
 
 	// Einstellungen
 	editServerIP *walk.LineEdit
-	radioDeutsch *walk.RadioButton
-	radioEnglish *walk.RadioButton
 
 	// Direct3D-Schicht
 	cmbDisplay *walk.ComboBox
@@ -357,8 +362,10 @@ func screenDPI() int {
 func (mw *AppWindow) build() error {
 	logoBitmap := loadLogo(logoPNG, logoHeight)
 	logoCF := loadLogo(logoCFPNG, logoCFHeight)
+	logoCBDE := loadLogo(logoCBDEPNG, logoCBDEHeight)
 
 	mw.hostModel = NewHostListModel()
+	mw.help = newHelpView(mw)
 
 	// Aktiver/inaktiver Reiter: gleiche Groesse, nur Bold wechselt, damit die
 	// Leiste beim Umschalten ruhig bleibt.
@@ -369,8 +376,8 @@ func (mw *AppWindow) build() error {
 		{key: "tab.game", active: func() bool { return mw.activeTab == tabSpiel }, onClick: func() { mw.showTab(tabSpiel) }},
 		{key: "tab.settings", active: func() bool { return mw.activeTab == tabEinstellungen },
 			onClick: func() { mw.showTab(tabEinstellungen) }},
-		// Kein Reiter, sondern ein Link auf die Support-Seite.
-		{key: "tab.help", active: func() bool { return false }, onClick: func() { openURL(supportURL) }},
+		// Das Handbuch im Launcher, siehe help.go.
+		{key: "tab.help", active: func() bool { return mw.activeTab == tabHilfe }, onClick: func() { mw.showTab(tabHilfe) }},
 	}
 
 	err := MainWindow{
@@ -391,10 +398,10 @@ func (mw *AppWindow) build() error {
 				OnClicked:   func() { openURL(siteURL) }},
 		},
 		Children: []Widget{
-			mw.headerBar(logoBitmap, logoCF),
+			mw.headerBar(logoBitmap, logoCBDE, logoCF),
 			mw.tabBar(),
 
-			// Gemeinsamer Container fuer beide Panels: er ist das einzige
+			// Gemeinsamer Container fuer die Panels: er ist das einzige
 			// dehnbare Kind des Root-Layouts, also bleiben Header und
 			// Tab-Leiste beim Umschalten exakt an ihrem Platz.
 			// Die selbst gezeichneten Reiter melden walk immer "will wachsen"
@@ -408,6 +415,7 @@ func (mw *AppWindow) build() error {
 				Children: []Widget{
 					mw.spielPanel(),
 					mw.einstellungenPanel(),
+					mw.help.panel(&mw.panelHilfe),
 				},
 			},
 		},
@@ -427,9 +435,13 @@ func (mw *AppWindow) build() error {
 		t.w.SetCursor(walk.CursorHand())
 	}
 	mw.t.btnStart.SetCursor(walk.CursorHand())
-	if mw.imgCF != nil {
-		mw.imgCF.SetCursor(walk.CursorHand())
+	for _, img := range []*walk.ImageView{mw.imgCF, mw.imgCBDE} {
+		if img != nil {
+			img.SetCursor(walk.CursorHand())
+		}
 	}
+	mw.langToggle.SetCursor(walk.CursorHand())
+	mw.help.attach()
 
 	// Hintergrund-Goroutinen sauber beenden statt auf ein zerstoertes
 	// Fenster-Handle zu pollen. sync.Once, weil Closing bei einem
@@ -459,8 +471,9 @@ func (mw *AppWindow) build() error {
 // ── Kopfbereich ───────────────────────────────────────────────────────────────
 
 // Kopfleiste: links das Clusterball-Logo (mit "RE-ENHANCED" darunter, wie im
-// Spiel), rechts Team ClusterForce mit Link.
-func (mw *AppWindow) headerBar(logo, logoCF *walk.Bitmap) Widget {
+// Spiel), rechts die Community-Seite clusterball.de und Team ClusterForce,
+// beide verlinkt und durch einen feinen Strich getrennt.
+func (mw *AppWindow) headerBar(logo, logoCBDE, logoCF *walk.Bitmap) Widget {
 	return Composite{
 		MinSize:    Size{Height: headerHeight},
 		MaxSize:    Size{Height: headerHeight},
@@ -470,6 +483,22 @@ func (mw *AppWindow) headerBar(logo, logoCF *walk.Bitmap) Widget {
 			// Ideal-Modus: feste Groesse, nicht dehnbar - siehe loadLogo.
 			ImageView{Image: logo, Mode: ImageViewModeIdeal},
 			HSpacer{},
+			ImageView{
+				AssignTo:    &mw.imgCBDE,
+				Image:       logoCBDE,
+				Mode:        ImageViewModeIdeal,
+				ToolTipText: siteURL,
+				OnMouseUp:   func(x, y int, b walk.MouseButton) { openURL(siteURL) },
+			},
+			HSpacer{Size: 14},
+			Composite{
+				// Ohne Layout bekaeme das leere Composite keine Groesse.
+				Layout:     VBox{MarginsZero: true},
+				MinSize:    Size{Width: 1, Height: 34},
+				MaxSize:    Size{Width: 1, Height: 34},
+				Background: SolidColorBrush{Color: walk.RGB(64, 80, 106)},
+			},
+			HSpacer{Size: 14},
 			ImageView{
 				AssignTo:    &mw.imgCF,
 				Image:       logoCF,
@@ -493,6 +522,8 @@ func (mw *AppWindow) tabBar() Widget {
 			mw.tabWidget(mw.tabs[1], 140),
 			mw.tabWidget(mw.tabs[2], 90),
 			HSpacer{},
+			mw.langWidget(),
+			HSpacer{Size: gutter - 6},
 		},
 	}
 }
@@ -884,20 +915,8 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 									},
 								},
 							},
-							VSpacer{Size: gapS},
-							Label{AssignTo: &mw.t.setLanguage, Text: tr("set.language"), Font: fontHeading},
-							Composite{
-								Layout: HBox{MarginsZero: true, Spacing: 16},
-								Children: []Widget{
-									// Sprachwechsel greift sofort, ohne Speichern
-									// und ohne Neustart.
-									RadioButton{AssignTo: &mw.radioDeutsch, Text: "Deutsch", Font: fontBody, Value: "de",
-										OnClicked: func() { mw.switchLanguage("de") }},
-									RadioButton{AssignTo: &mw.radioEnglish, Text: "English", Font: fontBody, Value: "en",
-										OnClicked: func() { mw.switchLanguage("en") }},
-									HSpacer{},
-								},
-							},
+							// Die Sprache steht nicht hier, sondern als DE | EN
+							// rechts in der Reiterleiste (langWidget).
 						},
 					},
 				},
@@ -1006,6 +1025,8 @@ func (mw *AppWindow) retranslate() {
 	for _, t := range mw.tabs {
 		t.w.Invalidate() // die Reiter holen ihren Text beim Zeichnen
 	}
+	mw.langToggle.Invalidate()
+	mw.help.retranslate()
 
 	mw.t.accPlayer.SetText(tr("acc.player"))
 	mw.t.accPassword.SetText(tr("acc.password"))
@@ -1088,7 +1109,6 @@ func (mw *AppWindow) retranslate() {
 
 	mw.t.setNetwork.SetText(tr("set.network"))
 	mw.t.setMaster.SetText(tr("set.master"))
-	mw.t.setLanguage.SetText(tr("set.language"))
 	mw.t.btnSave.SetText(tr("set.save"))
 	mw.t.btnSave.SetToolTipText(fmt.Sprintf(tr("set.saveTip"), configPath()))
 
@@ -1149,6 +1169,7 @@ func (mw *AppWindow) showTab(tab int) {
 
 	mw.panelSpiel.SetVisible(tab == tabSpiel)
 	mw.panelEinstellungen.SetVisible(tab == tabEinstellungen)
+	mw.panelHilfe.SetVisible(tab == tabHilfe)
 	for _, t := range mw.tabs {
 		t.w.Invalidate()
 	}
@@ -1164,15 +1185,6 @@ func (mw *AppWindow) applyConfig() {
 
 	if mw.chkExternalIP != nil {
 		mw.chkExternalIP.SetChecked(mw.cfg.UseExternalIP)
-	}
-	// SetChecked loest kein OnClicked aus, der Sprachwechsel wird hier also
-	// nicht versehentlich angestossen.
-	if mw.radioDeutsch != nil && mw.radioEnglish != nil {
-		if mw.cfg.Language == "en" {
-			mw.radioEnglish.SetChecked(true)
-		} else {
-			mw.radioDeutsch.SetChecked(true)
-		}
 	}
 
 	if mw.cmbDisplay != nil {
@@ -1293,12 +1305,8 @@ func (mw *AppWindow) readSettings() {
 		mw.cfg.D3D.Gamma = mw.sldBrightness.Value()
 	}
 
+	// Die Sprache setzt switchLanguage direkt in mw.cfg.
 	mw.cfg.ServerMode = "arena"
-	if mw.radioEnglish != nil && mw.radioEnglish.Checked() {
-		mw.cfg.Language = "en"
-	} else {
-		mw.cfg.Language = "de"
-	}
 	mw.syncSpiel()
 }
 

@@ -1,0 +1,247 @@
+# Hilfe im Launcher, Deutsch. Spielrelevanter Teil des Handbuchs von clusterball.de/handbuch
+# (ohne Installation, Systemvoraussetzungen und das alte XDream Command Center).
+#
+# Format, eine Zeile je Block (siehe help.go):
+#   = Kapitel          ## Zwischenüberschrift      - Aufzählung
+#   BEGRIFF :: Text    @r/@b/@y BEGRIFF :: Text (mit Ball in Rot/Blau/Gelb)
+#   [img datei.jpg]    [link Text|URL]             alles andere ist ein Absatz
+
+= Spielidee
+## Fly… Gather… Interfere… Score…
+Spüre den Nervenkitzel, wenn du die großen Punkte machen willst! Bleib cool, wenn du mit Höchstgeschwindigkeit durch die detailgetreuen Landschaften rauschst. Schrei auf, wenn dir deine Ballkette mit den vielen schönen Punkten kurz vor dem Ring weggeschnappt wird. Clusterball lässt sich mit nichts vergleichen, was du bisher kennst – es ist schnell, intensiv und macht wirklich süchtig.
+Die Grundidee ist einfach:
+- Fliege deinen Gleiter durch die Landschaft, das „Venue“.
+- Sammle die farbigen Bälle von den magnetischen Bahnen auf.
+- Nutze das Equipment in den Depots und auf den Quickstops, um deine Gegner zu stören.
+- Punkte, indem du die Ballkette hinter deinem Gleiter durch den Ring in der Arena fliegst.
+Ziemlich einfach, oder?
+
+= Online spielen
+Mit einem kostenlosen Account auf clusterball.de spielst du online und bekommst automatisch einen Platz in der Weltrangliste. Ohne Account sind nur LAN-Spiele möglich.
+- Klick im Launcher oben auf „Jetzt registrieren“ und fülle das Formular aus.
+- Nach einigen Minuten erhältst du eine Bestätigungsmail mit deinem Passwort.
+- Trag Name und Passwort im Launcher oben ein. Der Launcher gibt beides beim Start an das Spiel weiter.
+- Im Spiel bestätigst du deinen Namen mit „Rang holen“ im Setup unter Spieler.
+Jetzt bist du bereit, dich online mit Clusterball-Piloten aus aller Welt zu messen.
+[link Registrieren auf clusterball.de|https://www.clusterball.de/registrieren/]
+
+= Menüs
+## Spiel- und Menü-Navigation
+Mit der linken Maustaste kommst du in die Menüs und aktivierst Buttons. Mit der rechten bzw. linken Maustaste änderst du Einstellungen. Um ein Menü zu verlassen, klickst du auf den Pfeil < unten links.
+## Training
+Wenn du gegen die Clusterball-KI-Piloten (Bots) spielen möchtest, wähle Training. Den wahren Wettbewerb findest du aber nur online.
+WELT :: Die Landschaft, in der du fliegen willst.
+ZEITLIMIT :: Die gewünschte Spieldauer.
+PUNKTELIMIT :: Zusätzlich oder statt des Zeitlimits. Ein höheres Punktelimit bedeutet längere Spiele. Kommt ein Spieler dem Limit nahe oder reicht der Wert seiner Ballkette, um es zu überschreiten, erscheint eine Warnung auf dem Bildschirm.
+RESPAWN-ZEIT :: Die Zeit zwischen dem Abliefern der Bälle am Ring bzw. dem Aufnehmen von Equipment und ihrem Wiedererscheinen. Langsam passt zu Matches mit wenigen Spielern, schnell eignet sich für viele Spieler.
+RESPAWN-TYP :: „Fest“: das Equipment erscheint immer am selben Ort wieder. „Zufall“: an wechselnden Orten.
+MAX SPIELER :: Anzahl der Teilnehmer, höchstens acht.
+PILOTEN :: Hier wählst du die Gegner aus. Die Piloten haben unterschiedliches Verhalten und Können; stärkere Piloten bedeuten einen härteren Wettkampf. Die Reihenfolge bestimmt, wer zuerst aufgestellt wird; STÄRKE und BESCHREIBUNG stellen den Piloten vor.
+LOS :: Startet das Trainingsspiel gegen die Bots.
+## Spiel hosten
+Hier eröffnest du ein Multiplayer-Spiel. Um online zu spielen, musst du als Clusterball-User registriert sein (siehe Online spielen).
+HOST NAME :: Der Name, den die anderen Spieler in der Serverliste sehen.
+WELT :: Die Landschaft, zum Beispiel Egypt oder Stonehenge.
+SPIELTYP :: „Free for all“ (jeder für sich) oder eine der Teamvarianten (siehe Welten & Spieltypen).
+ZEITLIMIT :: Die Spieldauer. Längere Internet-Spiele bringen mehr Ranglistenpunkte.
+PUNKTELIMIT :: Zusätzlich oder statt des Zeitlimits. Höhere Limits bedeuten längere Spiele und mehr Ranglistenpunkte.
+RESPAWN-ZEIT / -TYP :: Langsam, normal oder schnell; fest oder Zufall – wie im Training.
+MAX SPIELER :: Höchstens acht.
+LOS :: Startet deinen Host.
+## Spiel beitreten
+Du kannst einem Spiel beitreten, das sich im Chatroom-Modus befindet (OFFEN), wenn noch ein Platz frei ist, oder ins Wartezimmer eines laufenden Spiels gehen und beitreten, sobald es wieder im Chatroom ist. Einem laufenden Spiel selbst kannst du nicht beitreten. Wähle einen Host aus der Liste und klicke auf Los.
+LAN :: Listet nur Spiele aus deinem lokalen Netzwerk.
+INTERNET :: Der weltweite Wettbewerb. Die Liste zeigt Name, Spieltyp, Welt, Ping, Spielerzahl und Status jedes Hosts. Ein * beim Spieltyp heißt: passwortgeschützt. Ein * bei der Welt heißt: auf diesem Host wechseln die Venues automatisch (Mapcycle).
+SORTIEREN NACH :: Ping, Alphabet oder Wartezeit.
+ERNEUERN / STOP :: Aktualisiert die Liste bzw. hält die Aktualisierung an.
+CHAT :: Zeigt alle Spieler, die gerade im Beitreten-Menü sind, aber auf keinem Host. Ein guter Ort, um sich zu einem Spiel zu verabreden.
+## Chatroom
+Wer ein Multiplayer-Spiel hostet oder ihm beitritt, landet zuerst im Chatroom. Sobald der hostende Spieler auf Los klickt, beginnt das Spiel.
+NÄCHSTES SPIEL :: Die Einstellungen des nächsten Matches; nur der Host kann sie ändern. Mit Los zeigst du, dass du bereit bist (ein „R“ erscheint neben deinem Namen).
+SPIELER :: Rang, Punkte, Verbindung und Ping deiner Mitspieler.
+TEAMS / INDIVIDUELL :: Nur in Teamspielen: Informationen über die Teams und deine eigene Leistung.
+PUNKTE :: Nach dem Spiel die Ergebnisse. Bei Gleichstand liegt vorne, wer die Punktzahl zuerst erreicht hat.
+VERLASSEN :: Verlässt Chatroom und Server.
+## Gespeicherte Spiele
+Hier schaust du aufgezeichnete Spiele an. Damit deine Online-Spiele aufgezeichnet werden, stell im Setup unter Optionen „Autom. Spiele speichern“ auf JA. Markiere ein Spiel und klicke auf Zeigen oder Löschen. Aufzeichnungen anderer Spieler legst du in den Ordner „Saved games“ im Clusterball-Ordner.
+F1 :: Folgen: Spieler, bester Spieler oder alle
+F2 :: Abspielgeschwindigkeit: normal, schnell oder langsam
+F3 :: Szenen: allgemein, Kämpfe, Punkten, Ballszenen oder Verfolgungsjagd
+F4 :: Schneller Vorlauf
+F5 :: 30 Sekunden vor
+F6 :: 30 Sekunden zurück
+Folgst du deinem eigenen Gleiter in der Außenansicht, verändern die Tasten 4, 5, 6, 8, + und – des Nummernblocks den Kamerawinkel. Die Wiedergabe läuft in einer Endlosschleife; mit Esc und „Welt verlassen“ beendest du sie.
+
+= Setup
+Im Setup änderst du Spielerangaben, Optionen, Steuerung und Systemeinstellungen.
+## Spieler
+NAME :: Der Name, mit dem du dich auf clusterball.de registriert hast – damit deine Punkte in die Rangliste eingehen. Der Launcher trägt ihn beim Start automatisch ein.
+PASSWORT :: Das Passwort zu deinem Namen.
+TEAM-NAME :: Im Teammodus „Join by name“ trittst du damit deinem Team bei oder gründest ein neues.
+FARBE :: Deine Lieblingsfarbe für den Gleiter. Du bekommst sie, wenn kein anderer Spieler auf dem Host sie schon hat.
+TEAM-FARBE :: Im Modus „Join by color“ trittst du damit dem Team dieser Farbe bei. Bei „Two teams“ legen die ersten beiden Spieler die Teamfarben fest.
+RANG HOLEN :: Holt deinen Rang und meldet dich am Rangserver an.
+## Optionen
+ZIELKREUZ :: IMMER zeigt das Zielkreuz dauerhaft, NICHT FEST nur bei Lenkwaffen.
+BENUTZE JOYSTICK :: Für Joystick, Gamepad oder Ähnliches.
+FLUGEIGENSCHAFTEN :: Anfänger, Normal, Fortgeschritten, Semi Pro oder Pro. Mit Eigene 1–3 und Enter passt du eine Einstellung selbst an (siehe Flugeigenschaften).
+STANDARDSICHT :: Cockpit oder Ansicht hinter dem Gleiter.
+PILOTNAME :: JA zeigt die Namen der anderen Spieler im Spiel.
+EQUIP AUFNAHME MODUS :: Wann die EDU (Equipment Delivery Unit) umschaltet: NIE (von Hand), IMMER (zur zuletzt aufgenommenen Waffe) oder PRIORITÄT (feste Reihenfolge: Ball Snatcher, Inverse Control, Backdraft, Gravitator, Inflator, Spaghetti String, Tractor Beam, Shockwave, Smoke Puffs; änderbar nur in der config.cfg im Clusterball-Ordner).
+AUTOWECHSEL EQUIP :: JA wechselt automatisch zur nächsten Waffe, wenn die Munition der aktuellen verbraucht ist.
+MAUSGESCHWINDIGKEIT :: Die Empfindlichkeit der Maus.
+TAUSCHE VERTIKALE ACHSE :: JA vertauscht oben und unten – das gewohnte Flugsimulator-Gefühl.
+FORCE FEEDBACK / FORCE STÄRKE :: Für Controller, die Force Feedback unterstützen.
+AUTOM. SPIELE SPEICHERN :: JA zeichnet deine Multiplayer-Spiele auf.
+SCHNELLE CHAT NACHRICHT (1–10) :: Vorgefertigte Texte auf F1–F10, weil es sich mitten im Kampf schlecht tippt. Du kannst sie hier ändern.
+## System
+AUDIO :: 3D- oder 2D-Sound, oder AUS.
+LAUTSTÄRKE / MUSIK :: Lautstärke und Musik an oder aus.
+NACHRICHTEN :: AN: der Bordcomputer meldet akustisch, wenn Nachrichten anderer Spieler eintreffen.
+GRAFIKQUALITÄT :: Die Detailstufe. Du stellst sie auch im Launcher unter Einstellungen ein.
+EDU SICHTBAR :: NEIN blendet die Waffeneinheit aus.
+GRAFIKMODUS / AUFLÖSUNG :: Im Re-Enhanced-Paket fest: Direct3D 11. Auflösung, Vollbild und Kantenglättung stellst du im Launcher unter Einstellungen ein.
+NETZWERK GESCHW. :: Deine Verbindung, damit die Datenübertragung bei Internetspielen passt.
+PROXY VERWENDEN / PROXY / PORT :: Nur nötig, wenn dein Rechner hinter einer Firewall den Masterserver nicht erreicht.
+ENDE :: Beendet Clusterball.
+## Esc-Menü
+Mit Esc kommst du während eines Spiels jederzeit ins Esc-Menü.
+WELT VERLASSEN :: Verlässt das Spiel und bringt dich ins vorherige Menü.
+SETUP :: Ein eingeschränktes Setup, in dem du Spieleinstellungen ändern kannst.
+
+= Steuerung
+Jeder hat seine Lieblingsbelegung – passe die Standardeinstellungen im Setup unter Steuerung an deine Gewohnheiten an. Die Vorgaben:
+PFEIL LINKS / RECHTS :: Lenkt den Gleiter nach links oder rechts.
+PFEIL OBEN / UNTEN :: Lenkt den Gleiter nach oben oder unten.
+E :: Rollen um die Längsachse.
+W :: Beschleunigen (gedrückt halten).
+S :: Bremsen.
+RECHTE MAUSTASTE :: Superboost – erhöht die Geschwindigkeit kurzzeitig drastisch.
+LINKE MAUSTASTE :: Feuert die ausgewählte Waffe; gedrückt halten für Dauerfeuer.
+D / A :: Nächstes bzw. vorheriges Equipment.
+Q :: Ziel wechseln bei automatischer Zielsuche.
+LEERTASTE :: Decoy Ball – ein Köder gegen Lenkwaffen, die auf dich abgefeuert wurden (siehe Bälle).
+ENTER :: Spielchat. Nachricht tippen und mit Enter abschicken.
+T :: Punkteübersicht an und aus.
+V :: Sicht wechseln: Cockpit oder Außenansicht.
+1–9 :: Direkt zu einer Waffe: 1 Smoke Puffs, 2 Inflator, 3 Ball Snatcher, 4 Spaghetti String, 5 Backdraft, 6 Inverse Control, 7 Tractor Beam, 8 Shockwave, 9 Gravitator.
+F1–F10 :: Schnelle Chat-Nachrichten an alle Piloten.
+
+= Bildschirm
+Die Anzeigen geben dir während des Spiels die wichtigsten Informationen:
+[img help_interface.jpg]
+1 BALLPUNKTE :: Links oben dein aktueller Punktestand.
+2 BÄLLE :: Ebenfalls links oben deine aktuelle Ballkette.
+3 RESTZEIT :: Die restliche Spielzeit. Mit Punktelimit die maximale Spielzeit.
+4 PUNKTEÜBERSICHT :: Erscheint kurz oben in der Mitte, wenn jemand punktet: Position und Punkte aller Spieler. Mit Punktelimit auch, wer nahe am, genau am oder über dem Limit ist. Mit T ein- und ausschalten.
+5 RADAR :: Rechts oben: die Gegner in Reichweite und ihre Ballketten. Der gelbe Pfeil zeigt die Richtung zur Arena mit dem Ring.
+6 ZIELKREUZ :: Ist eine Lenkwaffe ausgewählt, wird jeder Gegner in Sichtweite automatisch anvisiert und mit einem rotierenden Zielkreuz markiert. Mit Q wechselst du zwischen mehreren Gegnern.
+7 NACHRICHTEN :: Nachrichten der Mitspieler und des Bordcomputers. Mit Enter schreibst du selbst.
+8 SUPERBOOST :: Wie viele Superboosts du an Bord hast, höchstens 20.
+9 EQUIPMENT :: Die ausgewählte Waffe und wie viele davon du an Bord hast.
+10 GESCHWINDIGKEIT :: Die Höchstgeschwindigkeit sinkt mit jedem eingesammelten Ball. Das Maximum erreichst du nur kurz mit Superboost.
+11 LEBEN :: Der Zustand deines Gleiters. Bei 0 stürzt er ab, und du startest mit einem neuen an der Startrampe.
+
+= Flugeigenschaften
+Du kannst mit Tastatur, Maus, Gamepad, Joystick oder sogar einem Lenkrad fliegen. Schließ jedes Gerät vor dem Start von Clusterball an, damit es erkannt und kalibriert wird. Beachte bei der Tastenbelegung:
+- Jeder Taste kann nur eine Funktion zugeordnet werden.
+- Zwei Funktionen können nicht auf derselben Taste liegen.
+- Funktionen ohne Taste funktionieren im Spiel nicht.
+Die Grundeinstellungen lassen den Gleiter unterschiedlich reagieren: Anfänger ist langsam, stabil und leicht zu fliegen, aber weniger wendig. Pro erlaubt sehr schnelles, wendiges Manövrieren und braucht viel Übung. Zur Auswahl stehen Anfänger, Normal, Fortgeschritten, Semi Pro und Pro. Unter Eigene 1–3 (auswählen und Enter) baust du dir deine eigene Einstellung; mit „kopieren von“ startest du von einer bestehenden. Anfänger und Normal passen zur Tastatur, Fortgeschritten und Pro zur Maus.
+## Die Werte im Einzelnen
+STABILISIERER :: Hält den Gleiter automatisch waagerecht. VOLL stabilisiert in jeder Lage, PARTIAL nicht, wenn du kopfüber fliegst, NIE schaltet die Stabilisierung ab.
+STABILISIERER STÄRKE :: Hoch für schnelle, niedrig für langsame Stabilisierung.
+ROLLSCHUTZ :: Verhindert, dass der Gleiter beim Wenden unkontrolliert um die Längsachse rollt. VOLL immer (außer bei Kollisionen), PARTIELL und LIMITIERT unterschiedlich stark, NIE gar nicht.
+ROLLSCHUTZWINKEL :: Wie weit sich die Flügel beim Wenden neigen: nie (360), 90 oder 45 Grad.
+FRONT- / HECKSPOILER :: Je höher, desto schärfer schneidet der Gleiter durch die Luft. Stimme beide aufeinander ab, um Turbulenzen zu vermeiden.
+SEITENRUDER :: Größeres Ruder für schnellere Wenden in der Horizontalen.
+CPU RUDER KONTROLLE :: Wie stark der Bordcomputer bei horizontalen Wenden hilft.
+MAGNETSTÄRKE :: Mehr Anpressdruck auf den Bahnen: schnelleres, genaueres Gleiten.
+AUFSTIEGSWINKEL :: Je höher, desto steiler steigst du.
+QUERRUDER :: Größeres Querruder für schnellere Rollen.
+ROLLSTÄRKE :: Je höher, desto wirksamer deine Lenkbewegungen beim Rollen.
+VERTIKALER JET BOOSTER :: Mehr Schub in der Senkrechten – wie ein Senkrechtstarter.
+SEITLICHER JET BOOSTER :: Mehr Schub zur Seite für schnelleres horizontales Gleiten.
+BREMSKLAPPEN :: Je höher, desto stärker bremst du.
+TASTENSTÄRKE :: Die Empfindlichkeit der Tastatur.
+
+= Bälle
+Die Bälle sind dein vorrangiges Ziel. Es gibt drei Sorten, die sich in Farbe und Wert unterscheiden:
+@r ROT :: 1 Punkt
+@b BLAU :: 2 Punkte
+@y GELB :: 3 Punkte
+Die Bälle liegen meist auf den Bahnen, manchmal auch an anderen Orten. Blaue und gelbe Bälle findest du eher weiter weg von der Arena oder in schwierigen Ecken des Venues.
+## Decoy- oder Köderball
+Hat ein Gegner eine Lenkwaffe auf dich abgefeuert, wirfst du mit der Leertaste einen Köderball ab, um ihre Zielsuche zu stören und zu entkommen. Dafür wird der letzte Ball deiner Kette abgeworfen. Ein Köderball kann nicht eingesammelt werden.
+
+= Equipment
+Das Equipment (Ausrüstung) setzt du offensiv und defensiv ein. Du findest es in Depots – kleinen Gebäuden mit mehreren Gegenständen – und auf Quickstops, kleinen Kreuzbahnen mit je einem Gegenstand.
+SMOKE PUFFS :: Deine Standardausrüstung: kleine Geschosse mit stark verdichteter Luft. Beim Aufprall zerplatzen sie und können die Ballkette eines Gegners zerreißen. Ohne Zielsuche.
+BALL SNATCHER :: Klaut dem Gegner die Ballkette. Gib ihm etwas Zeit, den Weg zurück zu dir zu finden. Mit Zielsuche.
+INFLATOR :: Ein Gaskanister auf die Ballkette des Gegners: sie treibt hilflos davon, bis der aufgeblähte Ball platzt. Mit Zielsuche.
+INVERSE CONTROL :: Stellt die Steuerung des Gegners auf den Kopf. Mit Zielsuche.
+BACKDRAFT :: Schickt den Gegner rückwärts auf die Reise, bei Höchstgeschwindigkeit. Mit Zielsuche.
+SPAGHETTI STRING :: Ein klebriger, elastischer Pastastrang, der sich überall festheftet und den Gegner am Boden festnagelt. Reibung und Dehnung verträgt er schlecht. Ohne Zielsuche.
+TRACTOR BEAM :: Ein Energiestrahl, mit dem du einen Gegner einfängst und lenkst, solange die Energie reicht. Schiebst du ihn durch den Ring, während seine Bälle schon leuchten, bekommst du die Punkte doppelt – und er geht leer aus. Ohne Zielsuche.
+GRAVITATOR :: Ein superschwerer Klumpen grüner Glibber, der den Gegner nach unten zieht. Mit Zielsuche.
+SHOCKWAVE :: Abwerfen und weg, bevor die gewaltige Druckwelle dich erwischt. Ohne Zielsuche.
+SUPERBOOST :: Ein kräftiger Schub, der dich aus der Gefahr bringt – oder, unbedacht eingesetzt, erst recht hinein.
+Hat ein Gegner eine Waffe mit Zielsuche auf dich abgefeuert, piept dein Bordcomputer. Je schneller es piept, desto näher ist die Waffe.
+
+= Welten & Spieltypen
+## Welten (Venues)
+Ein Venue ist die Landschaft, in der gespielt wird. Viele tragen Züge echter Orte, etwa die Pyramiden in Ägypten oder Stonehenge in England. Jedes Venue hat dieselbe Grundstruktur:
+ARENA :: Hier steht der Ring.
+STARTBAHN :: Von hier hebst du am Start und nach einem Absturz ab.
+BAHNEN :: Der Hauptort für Bälle.
+DEPOTS :: Kleine Gebäude mit Equipment.
+QUICKSTOPS :: Kleine Kreuzbahnen mit je einem Gegenstand.
+Verstecken außerhalb des Venues geht nicht – eine unsichtbare Wand verhindert solch unsportliches Verhalten.
+## Spieltypen
+FREE FOR ALL :: Jeder spielt für sich. Es gewinnt, wer beim Schlusspfiff die meisten Punkte hat oder zuerst das Punktelimit erreicht.
+TWO TEAMS :: Zwei Teams. Die ersten beiden Spieler bestimmen die Teamfarben, alle weiteren werden abwechselnd verteilt. Die Punkte eines Teams werden addiert.
+JBC TEAMS (JOIN BY COLOR) :: Bis zu acht Teams, zum Beispiel vier Zweierteams. Du trittst dem Team mit deiner Teamfarbe aus dem Setup bei.
+JBN TEAMS (JOIN BY NAME) :: Du trittst dem Team mit deinem Teamnamen aus dem Setup bei. Wer als Erster des Teams das Spiel betritt, bestimmt die Teamfarbe.
+
+= Rang
+Für die Rangliste brauchst du einen Account auf clusterball.de (siehe Online spielen). Dein Rang wird beim Betreten eines Spiels vom Rangserver an den Host übermittelt, nach dem Spiel geht dein Ergebnis zurück in die Datenbank.
+In der Punkteübersicht bedeuten:
+WP :: Winner Points – Gewinnpunkte.
+CP :: Competitor Points – für Gegner, die du besiegt hast.
+TF :: Time Factor – die Punkte hängen auch von der Spieldauer ab (oder bei Punktelimit von den erreichten Punkten). Ein * heißt: mindestens ein Spieler hat das Spiel verlassen, für ihn gibt es nur anteilig Punkte.
+## Titel
+0 :: Newbie – ab 0 Punkten
+1 :: Ball boy – ab 25
+2 :: Trainee – ab 100
+3 :: Reserve – ab 250
+4 :: Rookie – ab 500
+5 :: Pilot – ab 1.100
+6 :: Pro – ab 2.000
+7 :: Champ – ab 3.300
+8 :: Star – ab 5.000
+9 :: All-star – ab 7.500
+10 :: Superfly – ab 12.000
+11 :: Hotstick – ab 20.000
+12 :: Ballbreaker – ab 33.000
+13 :: Ring King – ab 52.000
+14 :: Master * – ab 80.000
+15 :: Master ** – ab 117.000
+16 :: Master *** – ab 165.000
+17 :: Grand Master * – ab 225.000
+18 :: Grand Master ** – ab 300.000
+19 :: Grand Master *** – ab 390.000
+
+= Skins
+Genug von den Standard-Skins? So gestaltest du deinen eigenen:
+- Öffne den Ordner Skins im Clusterball-Ordner. Er enthält die Ordner Default, Single und Team.
+- Kopiere einen Skin aus Default und benenne ihn nach deinem Clusterball-Namen, zum Beispiel „Nickname.jpg“.
+- Bearbeite ihn in einem Bildprogramm. Die linke Hälfte ist die Unterseite des Gleiters, die rechte die Oberseite; beide werden im Spiel gespiegelt – Vorsicht bei Schrift.
+- Leg den fertigen Skin in den Ordner Single.
+Ein Team-Skin bekommt den Teamnamen und gehört in den Ordner Team. Skins anderer Spieler oder Teams siehst du, wenn du sie unter deren Namen in Single bzw. Team ablegst.
+
+= Support
+Fragen zu Clusterball beantwortet die Community im Forum.
+[link Forum auf clusterball.de|https://clusterball.de/board]
+[link Häufige Fragen (FAQ)|https://www.clusterball.de/faq/]
+Diese Hilfe beruht auf dem Handbuch von clusterball.de.
+[link Handbuch auf clusterball.de|https://www.clusterball.de/handbuch/]

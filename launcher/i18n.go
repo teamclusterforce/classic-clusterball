@@ -1,5 +1,7 @@
 package main
 
+import "syscall"
+
 // Sprachtabellen der Oberfläche.
 //
 // currentLang ist bewusst paketweit: auch launchCB und launchDedicatedHost
@@ -28,6 +30,23 @@ func tr(key string) string {
 		return s
 	}
 	return key
+}
+
+var procGetUserDefaultUILanguage = syscall.NewLazyDLL("kernel32.dll").NewProc("GetUserDefaultUILanguage")
+
+// systemLanguage ist "de", wenn die Windows-Oberflaeche deutsch ist, sonst "en".
+func systemLanguage() string {
+	id, _, _ := procGetUserDefaultUILanguage.Call()
+	return langOfLANGID(uint16(id))
+}
+
+// langOfLANGID: die unteren 10 Bit einer LANGID sind die Hauptsprache,
+// LANG_GERMAN ist 0x07 (de-DE, de-AT, de-CH, ...).
+func langOfLANGID(id uint16) string {
+	if id&0x3ff == 0x07 {
+		return "de"
+	}
+	return "en"
 }
 
 var textsDE = map[string]string{

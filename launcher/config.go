@@ -55,7 +55,7 @@ type AppConfig struct {
 var defaultConfig = AppConfig{
 	ServerMode:       "arena",
 	ServerIP:         "178.115.244.173",
-	Language:         "de",
+	Language:         "", // ohne gespeicherte Wahl: Sprache von Windows, siehe LoadConfig
 	HostlistDuration: 20,
 	UseExternalIP:    true,
 	ClampTexture:     true,
@@ -143,6 +143,11 @@ func cbExeDir(cfg *AppConfig) string {
 func LoadConfig() AppConfig {
 	cfg := defaultConfig
 	readAppConfig(&cfg)
+	// Beim ersten Start folgt die Sprache der Windows-Oberflaeche; danach gilt,
+	// was der Umschalter gespeichert hat.
+	if cfg.Language != "de" && cfg.Language != "en" {
+		cfg.Language = systemLanguage()
+	}
 
 	// Clusterball.exe liegt immer neben dem Launcher; einen anderen Ort gibt
 	// es nicht. Ein in älteren Konfigurationen gespeicherter Pfad wird nicht

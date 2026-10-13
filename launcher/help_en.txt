@@ -1,0 +1,248 @@
+# Launcher help, English. The game-related part of the manual at clusterball.de/handbuch, translated from the
+# German original (the site's English page is a poor machine translation). Installation, system requirements
+# and the old XDream Command Center are left out.
+#
+# Format, one line per block (see help.go):
+#   = Chapter          ## Subheading               - Bullet
+#   TERM :: Text       @r/@b/@y TERM :: Text (with a red/blue/yellow ball)
+#   [img file.jpg]     [link Text|URL]             anything else is a paragraph
+
+= The Game
+## Fly… Gather… Interfere… Score…
+Feel the thrill when you go for the big points! Keep your cool as you race through the detailed landscapes at top speed. Scream when your chain full of precious balls is snatched away just short of the ring. Clusterball is like nothing you have played before – fast, intense and truly addictive.
+The idea is simple:
+- Fly your glider through the landscape, the "venue".
+- Collect the coloured balls from the magnetic tracks.
+- Use the equipment in the depots and on the quickstops to get in your opponents' way.
+- Score by flying the chain of balls behind your glider through the ring in the arena.
+Pretty simple, right?
+
+= Playing Online
+A free account on clusterball.de lets you play online and puts you in the world ranking automatically. Without an account only LAN games are possible.
+- Click "Register now" at the top of the launcher and fill in the form.
+- After a few minutes you receive a confirmation email with your password.
+- Enter name and password at the top of the launcher. The launcher passes both to the game when it starts.
+- In the game, confirm your name with "Get rank" in Setup under Player.
+Now you are ready to take on Clusterball pilots from all over the world.
+[link Register on clusterball.de|https://www.clusterball.de/registrieren/]
+
+= Menus
+## Navigating the menus
+Click with the left mouse button to open menus and press buttons. The right and left mouse buttons change settings. To leave a menu, click the < arrow in the bottom left corner.
+## Training
+To play against the Clusterball AI pilots (bots), choose Training. The real competition, though, is online.
+WORLD :: The landscape you want to fly in.
+TIME LIMIT :: How long the game lasts.
+POINT LIMIT :: In addition to or instead of the time limit. A higher limit means longer games. When a player gets close to the limit, or the value of their chain would take them past it, a warning appears on screen.
+RESPAWN TIME :: The time between delivering balls at the ring (or picking up equipment) and their reappearance. Slow suits matches with few players, fast suits many players.
+RESPAWN TYPE :: "Fixed": equipment always reappears in the same place. "Random": in changing places.
+MAX PLAYERS :: Number of participants, eight at most.
+PILOTS :: Choose your opponents. The pilots differ in behaviour and skill; stronger pilots mean a tougher match. The order decides who is set up first; STRENGTH and DESCRIPTION introduce each pilot.
+GO :: Starts the training game against the bots.
+## Host game
+Opens a multiplayer game. To play online you need to be a registered Clusterball user (see Playing Online).
+HOST NAME :: The name other players see in the server list.
+WORLD :: The landscape, for example Egypt or Stonehenge.
+GAME TYPE :: "Free for all" (everyone for themselves) or one of the team variants (see Worlds & Game Types).
+TIME LIMIT :: How long the game lasts. Longer internet games earn more ranking points.
+POINT LIMIT :: In addition to or instead of the time limit. Higher limits mean longer games and more ranking points.
+RESPAWN TIME / TYPE :: Slow, normal or fast; fixed or random – as in training.
+MAX PLAYERS :: Eight at most.
+GO :: Starts your host.
+## Join game
+You can join a game that is in chat room mode (OPEN) while a slot is free, or wait in the waiting room of a running game and join once it is back in the chat room. You cannot join a game in progress. Pick a host from the list and click Go.
+LAN :: Lists only games in your local network.
+INTERNET :: The worldwide competition. The list shows name, game type, world, ping, number of players and status of each host. A * next to the game type means password protected. A * next to the world means the venues change automatically on this host (map cycle).
+SORT BY :: Ping, name or waiting time.
+REFRESH / STOP :: Updates the list or stops updating it.
+CHAT :: Shows everyone who is in the join menu but not on a host. A good place to arrange a game.
+## Chat room
+Hosting or joining a multiplayer game takes you to the chat room first. As soon as the host clicks Go, the game begins.
+NEXT GAME :: The settings of the next match; only the host can change them. Click Go to show you are ready (an "R" appears next to your name).
+PLAYERS :: Rank, score, connection and ping of the other players.
+TEAMS / INDIVIDUAL :: Team games only: information about the teams and your own performance.
+SCORE :: The results after the game. On a tie, whoever reached the score first ranks higher.
+LEAVE :: Leaves the chat room and the server.
+## Saved games
+Watch recorded games here. To record your online games, set "Auto save games" to YES in Setup under Options. Select a game and click Show or Delete. Recordings from other players go into the "Saved games" folder in the Clusterball folder.
+F1 :: Follow: player, best player or all
+F2 :: Playback speed: normal, fast or slow
+F3 :: Scenes: general, fights, scoring, ball scenes or chases
+F4 :: Fast forward
+F5 :: Forward 30 seconds
+F6 :: Back 30 seconds
+When you follow your own glider in the outside view, keys 4, 5, 6, 8, + and – on the numeric keypad move the camera. Playback loops endlessly; press Esc and "Leave world" to end it.
+
+= Setup
+Setup is where you change player details, options, controls and system settings.
+## Player
+NAME :: The name you registered on clusterball.de – so your points count for the ranking. The launcher fills it in when the game starts.
+PASSWORD :: The password for your name.
+TEAM NAME :: In "Join by name" team mode you join your team with it, or found a new one.
+COLOUR :: Your favourite glider colour. You get it whenever no other player on the host has it already.
+TEAM COLOUR :: In "Join by colour" mode you join the team of this colour. In "Two teams" the first two players set the team colours.
+GET RANK :: Fetches your rank and logs you in to the rank server.
+## Options
+CROSSHAIR :: ALWAYS shows it all the time, NOT FIXED only with guided weapons.
+USE JOYSTICK :: For joystick, gamepad and the like.
+FLIGHT MODEL :: Beginner, Normal, Advanced, Semi Pro or Pro. Pick Custom 1–3 and press Enter to tune a setting yourself (see Flight Model).
+DEFAULT VIEW :: Cockpit or behind the glider.
+PILOT NAMES :: YES shows the other players' names in the game.
+EQUIP PICKUP MODE :: When the EDU (equipment delivery unit) switches: NEVER (by hand), ALWAYS (to the weapon picked up last) or PRIORITY (fixed order: Ball Snatcher, Inverse Control, Backdraft, Gravitator, Inflator, Spaghetti String, Tractor Beam, Shockwave, Smoke Puffs; can only be changed in config.cfg in the Clusterball folder).
+AUTO SWITCH EQUIP :: YES switches to the next weapon when the current one runs out of ammunition.
+MOUSE SPEED :: Mouse sensitivity.
+INVERT VERTICAL AXIS :: YES swaps up and down – the familiar flight simulator feel.
+FORCE FEEDBACK / STRENGTH :: For controllers that support force feedback.
+AUTO SAVE GAMES :: YES records your multiplayer games.
+QUICK CHAT MESSAGE (1–10) :: Ready-made texts on F1–F10, because typing in the middle of a fight is hard. You can change them here.
+## System
+AUDIO :: 3D or 2D sound, or OFF.
+VOLUME / MUSIC :: Volume, and music on or off.
+MESSAGES :: ON: the onboard computer announces incoming messages from other players.
+GRAPHICS QUALITY :: The level of detail. You can also set it in the launcher under Settings.
+EDU VISIBLE :: NO hides the weapon unit.
+GRAPHICS MODE / RESOLUTION :: Fixed in the Re-Enhanced package: Direct3D 11. Set resolution, fullscreen and anti-aliasing in the launcher under Settings.
+NETWORK SPEED :: Your connection, so data transfer suits internet games.
+USE PROXY / PROXY / PORT :: Only needed when your computer cannot reach the master server through a firewall.
+EXIT :: Quits Clusterball.
+## Esc menu
+Press Esc at any time during a game to open the Esc menu.
+LEAVE WORLD :: Leaves the game and takes you back to the previous menu.
+SETUP :: A reduced setup where you can change game settings.
+
+= Controls
+Everyone has their favourite layout – adapt the defaults in Setup under Controls. The defaults:
+LEFT / RIGHT ARROW :: Steer left or right.
+UP / DOWN ARROW :: Steer up or down.
+E :: Roll around the longitudinal axis.
+W :: Accelerate (hold).
+S :: Brake.
+RIGHT MOUSE BUTTON :: Superboost – a short, drastic burst of speed.
+LEFT MOUSE BUTTON :: Fires the selected weapon; hold for continuous fire.
+D / A :: Next or previous equipment.
+Q :: Switch target for homing weapons.
+SPACE :: Decoy ball – a bait against guided weapons fired at you (see Balls).
+ENTER :: Game chat. Type your message and send it with Enter.
+T :: Score overview on and off.
+V :: Switch view: cockpit or outside.
+1–9 :: Straight to a weapon: 1 Smoke Puffs, 2 Inflator, 3 Ball Snatcher, 4 Spaghetti String, 5 Backdraft, 6 Inverse Control, 7 Tractor Beam, 8 Shockwave, 9 Gravitator.
+F1–F10 :: Quick chat messages to all pilots.
+
+= Screen
+The displays give you the key information during a game:
+[img help_interface.jpg]
+1 BALL POINTS :: Top left: your current score.
+2 BALLS :: Also top left: your current chain of balls.
+3 TIME LEFT :: The remaining game time. With a point limit, the maximum game time.
+4 SCORE OVERVIEW :: Appears briefly at the top centre whenever someone scores: position and points of all players. With a point limit it also shows who is close to, at or over the limit. Toggle it with T.
+5 RADAR :: Top right: opponents in range and their chains. The yellow arrow points towards the arena with the ring.
+6 CROSSHAIR :: With a guided weapon selected, every opponent in sight is targeted automatically and marked with a rotating crosshair. Q switches between several opponents.
+7 MESSAGES :: Messages from other players and the onboard computer. Press Enter to write your own.
+8 SUPERBOOST :: How many superboosts you have on board, 20 at most.
+9 EQUIPMENT :: The selected weapon and how many of it you carry.
+10 SPEED :: Your top speed drops with every ball you collect. The maximum is only reached briefly with a superboost.
+11 HEALTH :: The condition of your glider. At 0 it crashes, and you start again with a new one on the launch ramp.
+
+= Flight Model
+You can fly with keyboard, mouse, gamepad, joystick or even a steering wheel. Connect every device before starting Clusterball so it is detected and calibrated. When assigning keys:
+- Each key can only have one function.
+- Two functions cannot share a key.
+- Functions without a key do not work in the game.
+The basic settings make the glider handle differently: Beginner is slow, stable and easy to fly but less agile. Pro allows very fast, agile manoeuvres and takes a lot of practice. The choices are Beginner, Normal, Advanced, Semi Pro and Pro. Under Custom 1–3 (select and press Enter) you build your own; "copy from" starts from an existing one. Beginner and Normal suit the keyboard, Advanced and Pro the mouse.
+## The values in detail
+STABILISER :: Keeps the glider level automatically. FULL stabilises in any attitude, PARTIAL not when you fly upside down, NEVER switches it off.
+STABILISER STRENGTH :: High for fast, low for slow stabilisation.
+ROLL GUARD :: Keeps the glider from rolling uncontrollably when turning. FULL always (except in collisions), PARTIAL and LIMITED to different degrees, NEVER not at all.
+ROLL GUARD ANGLE :: How far the wings bank when turning: never (360), 90 or 45 degrees.
+FRONT / REAR SPOILER :: The higher, the sharper the glider cuts through the air. Balance the two to avoid turbulence.
+RUDDER :: A larger rudder for faster horizontal turns.
+CPU RUDDER CONTROL :: How much the onboard computer helps with horizontal turns.
+MAGNET STRENGTH :: More grip on the tracks: faster, more precise gliding.
+CLIMB ANGLE :: The higher, the steeper you climb.
+AILERONS :: Larger ailerons for faster rolls.
+ROLL STRENGTH :: The higher, the more effective your steering when rolling.
+VERTICAL JET BOOSTER :: More vertical thrust – like a jump jet.
+SIDE JET BOOSTER :: More sideways thrust for faster horizontal gliding.
+AIR BRAKES :: The higher, the harder you brake.
+KEY STRENGTH :: Keyboard sensitivity.
+
+= Balls
+Balls are your main goal. There are three kinds, differing in colour and value:
+@r RED :: 1 point
+@b BLUE :: 2 points
+@y YELLOW :: 3 points
+Most balls sit on the tracks, some elsewhere. Blue and yellow balls tend to be further from the arena or in tricky corners of the venue.
+## Decoy ball
+When an opponent fires a guided weapon at you, press Space to drop a decoy ball that confuses its homing so you can escape. The last ball of your chain is dropped for it. A decoy ball cannot be collected.
+
+= Equipment
+Equipment can be used to attack and to defend. You find it in depots – small buildings with several items – and on quickstops, small crossing tracks with one item each.
+SMOKE PUFFS :: Your standard equipment: small shells of highly compressed air. They burst on impact and can break an opponent's chain. No homing.
+BALL SNATCHER :: Steals your opponent's chain. Give it some time to find its way back to you. Homing.
+INFLATOR :: A gas canister for your opponent's chain: it drifts helplessly away until the bloated ball bursts. Homing.
+INVERSE CONTROL :: Turns your opponent's controls upside down. Homing.
+BACKDRAFT :: Sends your opponent flying backwards, at full speed. Homing.
+SPAGHETTI STRING :: A sticky, stretchy strand of pasta that sticks to any surface and pins your opponent to the ground. It does not like friction and stretching. No homing.
+TRACTOR BEAM :: An energy beam to catch and steer an opponent while the energy lasts. Push them through the ring while their balls are already glowing and you score them twice – and they get nothing. No homing.
+GRAVITATOR :: A super heavy lump of green goo that drags your opponent down. Homing.
+SHOCKWAVE :: Drop it and get away before the massive blast wave catches you. No homing.
+SUPERBOOST :: A powerful push that gets you out of danger – or, used carelessly, deeper into it.
+When an opponent fires a homing weapon at you, your onboard computer beeps. The faster it beeps, the closer the weapon.
+
+= Worlds & Game Types
+## Worlds (venues)
+A venue is the landscape a game takes place in. Many resemble real places, such as the pyramids of Egypt or Stonehenge in England. Every venue shares the same basic structure:
+ARENA :: Where the ring stands.
+RUNWAY :: Where you take off at the start and after a crash.
+TRACKS :: The main place for balls.
+DEPOTS :: Small buildings with equipment.
+QUICKSTOPS :: Small crossing tracks with one item each.
+You cannot hide outside the venue – an invisible wall stops such unsporting behaviour.
+## Game types
+FREE FOR ALL :: Everyone for themselves. Whoever has the most points at the final whistle, or reaches the point limit first, wins.
+TWO TEAMS :: Two teams. The first two players set the team colours, everyone after them is assigned alternately. A team's points are added up.
+JBC TEAMS (JOIN BY COLOUR) :: Up to eight teams, for example four teams of two. You join the team of the team colour set in your setup.
+JBN TEAMS (JOIN BY NAME) :: You join the team of the team name set in your setup. The first of a team to enter the game sets its colour.
+
+= Rank
+The ranking needs an account on clusterball.de (see Playing Online). When you enter a game the rank server sends your rank to the host; after the game your result goes back to the database.
+In the score overview:
+WP :: Winner points.
+CP :: Competitor points – for opponents you beat.
+TF :: Time factor – points also depend on the length of the game (or, with a point limit, on the points reached). A * means at least one player left the game; for them, points are awarded pro rata.
+## Titles
+0 :: Newbie – from 0 points
+1 :: Ball boy – from 25
+2 :: Trainee – from 100
+3 :: Reserve – from 250
+4 :: Rookie – from 500
+5 :: Pilot – from 1,100
+6 :: Pro – from 2,000
+7 :: Champ – from 3,300
+8 :: Star – from 5,000
+9 :: All-star – from 7,500
+10 :: Superfly – from 12,000
+11 :: Hotstick – from 20,000
+12 :: Ballbreaker – from 33,000
+13 :: Ring King – from 52,000
+14 :: Master * – from 80,000
+15 :: Master ** – from 117,000
+16 :: Master *** – from 165,000
+17 :: Grand Master * – from 225,000
+18 :: Grand Master ** – from 300,000
+19 :: Grand Master *** – from 390,000
+
+= Skins
+Tired of the default skins? Here is how to make your own:
+- Open the Skins folder in the Clusterball folder. It contains the folders Default, Single and Team.
+- Copy a skin from Default and name it after your Clusterball name, for example "Nickname.jpg".
+- Edit it in an image editor. The left half is the underside of the glider, the right half the top; both are mirrored in the game – mind any lettering.
+- Put the finished skin into the Single folder.
+A team skin is named after the team and goes into the Team folder. To see other players' or teams' skins, put them into Single or Team under their names.
+
+= Support
+The community answers questions about Clusterball in the forum.
+[link Forum on clusterball.de|https://clusterball.de/board]
+[link Frequently asked questions|https://www.clusterball.de/faq/]
+This help is based on the manual at clusterball.de.
+[link Manual on clusterball.de|https://www.clusterball.de/en/handbuch/]
