@@ -55,7 +55,7 @@ func (mw *AppWindow) tabWidget(t *tabItem, width int) Widget {
 		AssignTo:            &t.w,
 		MinSize:             Size{Width: width, Height: tabBarHeight},
 		MaxSize:             Size{Width: width, Height: tabBarHeight},
-		DoubleBuffering:     true,
+		PaintMode:           PaintBuffered, // DoubleBuffering wertet walk nicht aus; ohne das wird vor jedem Zeichnen geloescht (Flackern)
 		InvalidatesOnResize: true,
 		Paint: func(c *walk.Canvas, _ walk.Rectangle) error {
 			b := t.w.ClientBounds()
@@ -82,7 +82,7 @@ func (mw *AppWindow) ctaButton(assign **walk.CustomWidget, key string, height in
 		AssignTo:            assign,
 		MinSize:             Size{Height: height},
 		MaxSize:             Size{Height: height},
-		DoubleBuffering:     true,
+		PaintMode:           PaintBuffered, // DoubleBuffering wertet walk nicht aus; ohne das wird vor jedem Zeichnen geloescht (Flackern)
 		InvalidatesOnResize: true,
 		Paint: func(c *walk.Canvas, _ walk.Rectangle) error {
 			b := (*assign).ClientBounds()
@@ -120,7 +120,7 @@ func (mw *AppWindow) langWidget() Widget {
 		AssignTo:            &mw.langToggle,
 		MinSize:             Size{Width: width, Height: tabBarHeight},
 		MaxSize:             Size{Width: width, Height: tabBarHeight},
-		DoubleBuffering:     true,
+		PaintMode:           PaintBuffered, // DoubleBuffering wertet walk nicht aus; ohne das wird vor jedem Zeichnen geloescht (Flackern)
 		InvalidatesOnResize: true,
 		ToolTipText:         "Sprache / Language",
 		Paint: func(c *walk.Canvas, _ walk.Rectangle) error {
@@ -160,8 +160,8 @@ func (mw *AppWindow) langWidget() Widget {
 // Hinweis links und Knoepfen rechts.
 
 const (
-	formRowHeight  = 28
-	formLabelWidth = 170
+	formRowHeight  = 30
+	formLabelWidth = 180
 	formCardPad    = 14
 )
 
@@ -178,7 +178,7 @@ func formRow(label **walk.Label, key, tip string, control Widget) Widget {
 		MaxSize: Size{Height: formRowHeight},
 		Layout:  HBox{MarginsZero: true, Spacing: gapM, Alignment: AlignHNearVCenter},
 		Children: []Widget{
-			Label{AssignTo: label, Text: tr(key), Font: fontBody, ToolTipText: tip,
+			Label{AssignTo: label, Text: tr(key), Font: fontForm, ToolTipText: tip,
 				MinSize: Size{Width: formLabelWidth}, MaxSize: Size{Width: formLabelWidth}},
 			control,
 			HSpacer{},
@@ -190,7 +190,7 @@ func formRow(label **walk.Label, key, tip string, control Widget) Widget {
 // den Zeilen darunter.
 func formCard(title **walk.Label, key string, rows ...Widget) Widget {
 	children := []Widget{
-		Label{AssignTo: title, Text: tr(key), Font: fontHeading},
+		Label{AssignTo: title, Text: tr(key), Font: fontFormHeading},
 		Composite{
 			Layout: HBox{MarginsZero: true, SpacingZero: true},
 			Children: []Widget{
@@ -209,7 +209,7 @@ func formCard(title **walk.Label, key string, rows ...Widget) Widget {
 	// Feste Hoehe: Tastensymbole sind CustomWidgets und melden immer "will
 	// wachsen" - ohne Deckel wuerde die Karte auf die Hoehe der Nachbarspalte
 	// gestreckt und ihre Zeilen auseinandergezogen.
-	h := 2 + 20 + 17 + 3 + gapS + len(rows)*formRowHeight + 2
+	h := 2 + 20 + 20 + 3 + gapS + len(rows)*formRowHeight + 2
 	return Composite{
 		MinSize:    Size{Height: h},
 		MaxSize:    Size{Height: h},
@@ -250,12 +250,12 @@ func formFooter(hints []Widget, buttons ...Widget) Widget {
 
 // formHint ist eine Hinweiszeile fuer formFooter.
 func formHint(assign **walk.Label, key string) Widget {
-	return Label{AssignTo: assign, Text: tr(key), Font: fontHint, TextColor: colMuted}
+	return Label{AssignTo: assign, Text: tr(key), Font: fontFormHint, TextColor: colMuted}
 }
 
 // presetBar: die Leiste mit den Voreinstellungen oben auf beiden Seiten.
 func presetBar(label **walk.Label, buttons ...Widget) Widget {
-	children := []Widget{Label{AssignTo: label, Text: tr("set.preset"), Font: fontBodyBold}}
+	children := []Widget{Label{AssignTo: label, Text: tr("set.preset"), Font: fontFormBold}}
 	children = append(children, buttons...)
 	children = append(children, HSpacer{})
 	return Composite{
@@ -284,7 +284,7 @@ func valueSlider(assign **walk.Slider, label **walk.Label, lo, hi int, onChange 
 					}
 				},
 			},
-			Label{AssignTo: label, Text: "0", Font: fontBody, MinSize: Size{Width: 28}},
+			Label{AssignTo: label, Text: "0", Font: fontForm, MinSize: Size{Width: 28}},
 		},
 	}
 }

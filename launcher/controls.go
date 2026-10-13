@@ -361,8 +361,8 @@ type controlsView struct {
 func newControlsView(mw *AppWindow) *controlsView {
 	c := &controlsView{mw: mw, capture: -1, caps: make([]*walk.CustomWidget, len(ctrlActions)),
 		labels: make([]*walk.Label, len(ctrlActions))}
-	c.fCap, _ = walk.NewFont(fontFamily, 9, walk.FontBold)
-	c.fSmall, _ = walk.NewFont(fontFamily, 8, 0)
+	c.fCap, _ = walk.NewFont(fontFamily, 10, walk.FontBold)
+	c.fSmall, _ = walk.NewFont(fontFamily, 9, 0)
 	c.glyphs = newGlyphCache()
 	return c
 }
@@ -387,11 +387,11 @@ func (c *controlsView) panel(assign **walk.Composite) Widget {
 		Layout:   VBox{Margins: Margins{Left: gutter, Top: 12, Right: gutter, Bottom: 10}, Spacing: gapM},
 		Children: []Widget{
 			presetBar(&c.preset,
-				PushButton{AssignTo: &c.presets[0], Text: tr("ctl.presetWASD"), Font: fontBody,
-					MinSize: Size{Width: 130, Height: 26}, MaxSize: Size{Width: 130, Height: 26},
+				PushButton{AssignTo: &c.presets[0], Text: tr("ctl.presetWASD"), Font: fontForm,
+					MinSize: Size{Width: 140, Height: 28}, MaxSize: Size{Width: 140, Height: 28},
 					OnClicked: func() { c.applyPreset(presetWASD) }},
-				PushButton{AssignTo: &c.presets[1], Text: tr("ctl.presetClassic"), Font: fontBody,
-					MinSize: Size{Width: 130, Height: 26}, MaxSize: Size{Width: 130, Height: 26},
+				PushButton{AssignTo: &c.presets[1], Text: tr("ctl.presetClassic"), Font: fontForm,
+					MinSize: Size{Width: 140, Height: 28}, MaxSize: Size{Width: 140, Height: 28},
 					OnClicked: func() { c.applyPreset(presetClassic) }}),
 			Composite{
 				Layout: HBox{MarginsZero: true, Spacing: gapM, Alignment: AlignHNearVNear},
@@ -419,14 +419,14 @@ func (c *controlsView) saveMouse() {
 	}
 }
 
-const capWidth, capHeight = 170, 26
+const capWidth, capHeight = 190, 28
 
 func (c *controlsView) capWidget(i int) Widget {
 	return CustomWidget{
 		AssignTo:            &c.caps[i],
 		MinSize:             Size{Width: capWidth, Height: capHeight},
 		MaxSize:             Size{Width: capWidth, Height: capHeight},
-		DoubleBuffering:     true,
+		PaintMode:           PaintBuffered, // DoubleBuffering wertet walk nicht aus; ohne das wird vor jedem Zeichnen geloescht (Flackern)
 		InvalidatesOnResize: true,
 		Paint:               func(cv *walk.Canvas, _ walk.Rectangle) error { return c.paintCap(cv, i) },
 		OnMouseUp: func(x, y int, b walk.MouseButton) {

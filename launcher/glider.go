@@ -437,7 +437,7 @@ func (g *gliderView) widget() Widget {
 		AssignTo:            &g.w,
 		MinSize:             Size{Width: 190, Height: 80}, // darf schrumpfen, das Fenster waechst nicht
 		MaxSize:             Size{Width: 190, Height: 150},
-		DoubleBuffering:     true,
+		PaintMode:           PaintBuffered, // DoubleBuffering wertet walk nicht aus; ohne das wird vor jedem Zeichnen geloescht (Flackern)
 		InvalidatesOnResize: true,
 		Paint:               func(c *walk.Canvas, _ walk.Rectangle) error { return g.paint(c) },
 	}

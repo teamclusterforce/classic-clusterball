@@ -228,7 +228,7 @@ func (h *helpView) panel(assign **walk.Composite) Widget {
 	page := CustomWidget{
 		AssignTo:            &h.page,
 		StretchFactor:       10,
-		DoubleBuffering:     true,
+		PaintMode:           PaintBuffered, // DoubleBuffering wertet walk nicht aus; ohne das wird vor jedem Zeichnen geloescht (Flackern)
 		InvalidatesOnResize: true,
 		Paint:               func(c *walk.Canvas, _ walk.Rectangle) error { return h.paintPage(c) },
 		OnMouseDown:         func(x, y int, b walk.MouseButton) { h.mouseDown(x, y, b) },
@@ -253,7 +253,7 @@ func (h *helpView) navWidget() Widget {
 		AssignTo:            &h.nav,
 		MinSize:             Size{Width: helpNavWidth},
 		MaxSize:             Size{Width: helpNavWidth},
-		DoubleBuffering:     true,
+		PaintMode:           PaintBuffered, // DoubleBuffering wertet walk nicht aus; ohne das wird vor jedem Zeichnen geloescht (Flackern)
 		InvalidatesOnResize: true,
 		Paint:               func(c *walk.Canvas, _ walk.Rectangle) error { return h.paintNav(c) },
 		OnMouseUp: func(x, y int, b walk.MouseButton) {

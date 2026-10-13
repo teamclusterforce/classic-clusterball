@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"syscall"
@@ -103,6 +104,12 @@ var (
 	fontBody     = Font{Family: fontFamily, PointSize: 9}
 	fontBodyBold = Font{Family: fontFamily, PointSize: 9, Bold: true}
 	fontHint     = Font{Family: fontFamily, PointSize: 8, Italic: true}
+
+	// Einstellungen und Steuerung: dort ist Platz, die Schrift eine Stufe groesser.
+	fontForm        = Font{Family: fontFamily, PointSize: 10}
+	fontFormBold    = Font{Family: fontFamily, PointSize: 10, Bold: true}
+	fontFormHeading = Font{Family: fontFamily, PointSize: 11, Bold: true}
+	fontFormHint    = Font{Family: fontFamily, PointSize: 9, Italic: true}
 )
 
 // Auswahllisten, deren Beschriftung uebersetzt wird, waehrend der gespeicherte
@@ -315,10 +322,23 @@ func main() {
 }
 
 func runGUI(cfg *AppConfig) {
+	// Abstuerze landen in ClusterballCC_crash.log neben dem Launcher - ohne
+	// Konsole waere ein Go-Panic sonst spurlos. Bleibt die Datei leer, wird
+	// sie beim Beenden wieder entfernt.
+	crashPath := filepath.Join(appDir(), "ClusterballCC_crash.log")
+	if f, err := os.OpenFile(crashPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644); err == nil {
+		debug.SetCrashOutput(f, debug.CrashOptions{})
+		defer func() {
+			f.Close()
+			if st, err := os.Stat(crashPath); err == nil && st.Size() == 0 {
+				os.Remove(crashPath)
+			}
+		}()
+	}
 	mw := &AppWindow{cfg: *cfg, done: make(chan struct{}), lastHosts: -1}
 	if err := mw.build(); err != nil {
 		walk.MsgBox(nil, tr("dlg.error"), err.Error(), walk.MsgBoxIconError)
-		os.Exit(1)
+		return
 	}
 	mw.Run()
 }
@@ -791,11 +811,11 @@ func (mw *AppWindow) serverList() Widget {
 func (mw *AppWindow) einstellungenPanel() Widget {
 	// combo baut eine Auswahlliste fester Breite.
 	combo := func(assign **walk.ComboBox, model []string, tip string) Widget {
-		return ComboBox{AssignTo: assign, Model: model, Font: fontBody, ToolTipText: tip,
-			MinSize: Size{Width: 160}, MaxSize: Size{Width: 160}}
+		return ComboBox{AssignTo: assign, Model: model, Font: fontForm, ToolTipText: tip,
+			MinSize: Size{Width: 170}, MaxSize: Size{Width: 170}}
 	}
 	check := func(assign **walk.CheckBox, tip string) Widget {
-		return CheckBox{AssignTo: assign, Font: fontBody, ToolTipText: tip}
+		return CheckBox{AssignTo: assign, Font: fontForm, ToolTipText: tip}
 	}
 
 	return Composite{
@@ -843,12 +863,12 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 							formRow(&mw.t.setOwnIP, "act.ownIP", "", Composite{
 								Layout: HBox{MarginsZero: true, Spacing: 4, Alignment: AlignHNearVCenter},
 								Children: []Widget{
-									LineEdit{AssignTo: &mw.editOwnIP, Text: mw.cfg.OwnIP, Font: fontBody,
+									LineEdit{AssignTo: &mw.editOwnIP, Text: mw.cfg.OwnIP, Font: fontForm,
 										MinSize: Size{Width: 130}, MaxSize: Size{Width: 130}},
 									PushButton{
 										AssignTo:    &mw.t.btnDetectIP,
 										Text:        "↻",
-										Font:        fontBody,
+										Font:        fontForm,
 										MinSize:     Size{Width: 26, Height: 23},
 										MaxSize:     Size{Width: 26, Height: 23},
 										ToolTipText: tr("act.detectTip"),
@@ -859,7 +879,7 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 							}),
 							formRow(&mw.t.setExternal, "act.external", "", CheckBox{
 								AssignTo: &mw.chkExternalIP,
-								Font:     fontBody,
+								Font:     fontForm,
 								OnClicked: func() {
 									mw.cfg.UseExternalIP = mw.chkExternalIP.Checked()
 									if mw.chkExternalIP.Checked() {
@@ -877,9 +897,9 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 				PushButton{
 					AssignTo:  &mw.t.btnDefaults,
 					Text:      tr("set.defaults"),
-					Font:      fontBody,
-					MinSize:   Size{Width: 170, Height: 32},
-					MaxSize:   Size{Width: 170, Height: 32},
+					Font:      fontForm,
+					MinSize:   Size{Width: 210, Height: 32},
+					MaxSize:   Size{Width: 210, Height: 32},
 					OnClicked: func() { mw.restoreDefaults() },
 				},
 				// Der Pfad gehoert in den Tooltip: als Label wuerde seine
@@ -887,9 +907,9 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 				PushButton{
 					AssignTo:    &mw.t.btnSave,
 					Text:        tr("set.save"),
-					Font:        fontBodyBold,
-					MinSize:     Size{Width: 200, Height: 32},
-					MaxSize:     Size{Width: 200, Height: 32},
+					Font:        fontFormBold,
+					MinSize:     Size{Width: 210, Height: 32},
+					MaxSize:     Size{Width: 210, Height: 32},
 					ToolTipText: fmt.Sprintf(tr("set.saveTip"), configPath()),
 					OnClicked:   func() { mw.saveSettings() },
 				},
@@ -915,9 +935,9 @@ func (mw *AppWindow) presetButton(i int) Widget {
 	return PushButton{
 		AssignTo:  &mw.t.btnPresets[i],
 		Text:      tr(graphicsPresets[i].key),
-		Font:      fontBody,
-		MinSize:   Size{Width: 92, Height: 26},
-		MaxSize:   Size{Width: 92, Height: 26},
+		Font:      fontForm,
+		MinSize:   Size{Width: 100, Height: 28},
+		MaxSize:   Size{Width: 100, Height: 28},
 		OnClicked: func() { mw.applyPreset(i) },
 	}
 }
