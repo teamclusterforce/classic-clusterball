@@ -297,8 +297,9 @@ static DWORD WINAPI my_BASS_StreamCreateFile(BOOL mem, void *file, DWORD offset,
         b = b ? b + 1 : (const char *)file;
         snprintf(alt, sizeof alt, "%s\\%s", g_music_dir, b);
         if (GetFileAttributesA(alt) != INVALID_FILE_ATTRIBUTES) {
-            CLOG("music: %s -> %s", (const char *)file, alt);
-            return real_BASS_StreamCreateFile(mem, alt, offset, length, flags);
+            DWORD h = real_BASS_StreamCreateFile(mem, alt, offset, length, flags);
+            CLOG("music: %s -> %s (stream %lu)", (const char *)file, alt, h);
+            if (h) return h; // BASS could not open it: fall back to the original
         }
     }
     return real_BASS_StreamCreateFile(mem, file, offset, length, flags);

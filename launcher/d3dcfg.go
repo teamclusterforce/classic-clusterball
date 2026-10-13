@@ -48,6 +48,8 @@ var defaultD3D = D3DSettings{
 	AmbientOcc:  false,
 	MouseScale:  0.35,
 	Gamma:       100,
+	CFMusic:     true, // Musik von ClusterForce, solange nichts anderes gewaehlt ist
+	BallSound:   "",   // Ball-Sound des Spiels
 }
 
 const d3dIniName = "clusterball_d3d.ini"

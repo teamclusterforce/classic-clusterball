@@ -47,6 +47,23 @@ $music = [ordered]@{
 $len = 30   # seconds in the file
 $xf = 2     # crossfade at the loop point
 
+# ID3 tags as on the ClusterForce Steam soundtrack (clusterforce-client/tools/soundtrack-build.sh, CF-2686): title,
+# artist and album artist, album, year and the album cover as an attached picture, ID3v2.3. The title comes from
+# tools/music-tracks.tsv (master -> title); masters not listed there yet (the reserved ones) keep their file name.
+$cover = Join-Path $CF 'steam\steam-store\soundtrack\album_cover_1000.jpg'
+if (-not (Test-Path $cover)) { throw "missing cover: $cover" }
+$titles = @{}
+foreach ($line in Get-Content (Join-Path $CF 'clusterforce-client\tools\music-tracks.tsv')) {
+    if ($line -match '^#' -or -not $line.Trim()) { continue }
+    $f = $line -split "`t"
+    if ($f.Count -ge 4) { $titles[[IO.Path]::GetFileNameWithoutExtension($f[0])] = $f[3].Trim() }
+}
+function TagArgs([string]$title) {
+    @('-metadata', "title=$title", '-metadata', 'artist=Team ClusterForce', '-metadata', 'album_artist=Team ClusterForce',
+      '-metadata', 'album=ClusterForce Soundtrack', '-metadata', 'date=2026',
+      '-map', '1:v', '-c:v', 'copy', '-disposition:v', 'attached_pic', '-id3v2_version', '3')
+}
+
 foreach ($game in $music.Keys) {
     $src = Join-Path $masters ($music[$game] + '.wav')
     if (-not (Test-Path $src)) { throw "missing master: $src" }
@@ -59,20 +76,20 @@ foreach ($game in $music.Keys) {
         "[c]atrim=${xf}:${len},asetpts=PTS-STARTPTS[body];" +
         "[head][tail]amix=inputs=2:normalize=0[x];" +
         "[x][body]concat=n=2:v=0:a=1,loudnorm=I=-16:TP=-1.5,aresample=44100,asetpts=N/SR/TB[out]"
+    $title = if ($titles.ContainsKey($music[$game])) { $titles[$music[$game]] } else { $music[$game] }
     $dst = Join-Path $musicOut "$game.mp3"
-    & ffmpeg -hide_banner -loglevel error -y -ss $start -t $total -i $src -filter_complex $graph -map '[out]' `
-        -map_metadata -1 -c:a libmp3lame -b:a 128k -ar 44100 -ac 2 $dst
+    & ffmpeg -hide_banner -loglevel error -y -ss $start -t $total -i $src -i $cover -filter_complex $graph -map '[out]' `
+        -map_metadata -1 -c:a libmp3lame -b:a 128k -ar 44100 -ac 2 @(TagArgs $title) $dst
     if ($LASTEXITCODE) { throw "ffmpeg failed for $game" }
-    "{0,-16} <- {1} (from {2} s)" -f $game, $music[$game], $start
+    "{0,-16} <- {1} (from {2} s)" -f $game, $title, $start
 }
 
-
 # The menu music: the whole song of the ClusterForce teaser (trailer-cut.cmd), not cut, loudness-normalised like the
-# rest, MP3 128 kbit/s.
+# rest, MP3 128 kbit/s. It has no entry in music-tracks.tsv; its title here is a placeholder.
 $teaser = Join-Path $CF '_Import\clusterforce (1).wav'
 if (-not (Test-Path $teaser)) { throw "missing teaser song: $teaser" }
-& ffmpeg -hide_banner -loglevel error -y -i $teaser -af 'loudnorm=I=-16:TP=-1.5,aresample=44100,asetpts=N/SR/TB' `
-    -map_metadata -1 -c:a libmp3lame -b:a 128k -ar 44100 -ac 2 (Join-Path $musicOut 'Intro.mp3')
+& ffmpeg -hide_banner -loglevel error -y -i $teaser -i $cover -map 0:a -af 'loudnorm=I=-16:TP=-1.5,aresample=44100,asetpts=N/SR/TB' `
+    -map_metadata -1 -c:a libmp3lame -b:a 128k -ar 44100 -ac 2 @(TagArgs 'ClusterForce (Teaser)') (Join-Path $musicOut 'Intro.mp3')
 if ($LASTEXITCODE) { throw 'ffmpeg failed for Intro' }
 'Intro            <- teaser song (whole)'
 # Ball pickup sounds: ClusterForce's three sets (CF-2193). The announcer call exists from two speakers.

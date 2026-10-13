@@ -148,3 +148,47 @@ func TestTonInDerIni(t *testing.T) {
 		t.Error("unbekannte Variante akzeptiert")
 	}
 }
+
+// Die Musik landet unter Music\CF 2026, ein frueherer clusterforce\music
+// verschwindet; die INI zeigt auf den neuen Ort.
+func TestMusikOrt(t *testing.T) {
+	dir := t.TempDir()
+	old := filepath.Join(dir, cfMusicOldSubdir)
+	if err := os.MkdirAll(old, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := installCFAudio(dir, &D3DSettings{CFMusic: true}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "Music", "CF 2026", "Intro.mp3")); err != nil {
+		t.Errorf("Intro fehlt: %v", err)
+	}
+	if _, err := os.Stat(old); !os.IsNotExist(err) {
+		t.Error("alter Musikordner noch da")
+	}
+	ini := ParseIni("")
+	applyD3DSettings(ini, &D3DSettings{CFMusic: true})
+	if v, _ := ini.Get("MusicDir"); v != `Music\CF 2026` {
+		t.Errorf("MusicDir = %q", v)
+	}
+}
+
+// Ohne Wahl laeuft die Musik von ClusterForce und der Ball-Sound des Spiels;
+// wer "Original" waehlt, behaelt es auch nach dem naechsten Einlesen.
+func TestTonVorgabe(t *testing.T) {
+	dir := t.TempDir()
+	cfg := AppConfig{CBExePath: filepath.Join(dir, "Clusterball.exe")}
+	readD3DSettings(&cfg)
+	if !cfg.D3D.CFMusic || cfg.D3D.BallSound != "" {
+		t.Errorf("Vorgabe: Musik CF %v, Ball %q", cfg.D3D.CFMusic, cfg.D3D.BallSound)
+	}
+	cfg.D3D.CFMusic = false
+	if err := writeD3DSettings(&cfg); err != nil {
+		t.Fatal(err)
+	}
+	cfg.D3D.CFMusic = true
+	readD3DSettings(&cfg)
+	if cfg.D3D.CFMusic {
+		t.Error("bewusst gewaehltes Original nicht behalten")
+	}
+}

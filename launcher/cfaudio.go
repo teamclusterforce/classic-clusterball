@@ -5,7 +5,8 @@
 // mit 128 kbit/s, dazu die Ball-Sounds als WAV im Format des Spiels.
 //
 // Die Originaldateien des Spiels bleiben unangetastet. Der Launcher legt beim
-// Spielstart alles unter clusterforce\ im Spielordner ab und traegt in der
+// Spielstart die Musik unter Music\CF 2026 und das Ball-Archiv unter
+// clusterforce\ im Spielordner ab und traegt in der
 // clusterball_d3d.ini ein, was der Renderer statt des Originals nehmen soll:
 // MusicDir (die Musik spielt das Spiel ueber BASS aus Levels\<Venue>.mp3 und
 // MUSIC\Intro.mp3/Outro.mp3) und DataArchive, eine Kopie der Data.mrg, in der
@@ -32,7 +33,9 @@ var cfAudio embed.FS
 
 const (
 	cfAudioDir    = "clusterforce"
-	cfMusicSubdir = `clusterforce\music`
+	cfMusicSubdir = `Music\CF 2026` // neben der Musik des Spiels (Music\Intro.mp3)
+	// Frueherer Ort der Musik; wird beim Spielstart entfernt.
+	cfMusicOldSubdir = `clusterforce\music`
 )
 
 // Ball-Sound-Varianten: Wert in den Einstellungen -> WAV fuer Ball.wav, Ball1,
@@ -76,6 +79,7 @@ func ballVariantOf(archive string) string {
 // installCFAudio legt Musik und Ball-Sound-Archiv der gewaehlten Einstellungen
 // im Spielordner ab. Vorhandene Dateien gleicher Groesse bleiben stehen.
 func installCFAudio(dir string, d *D3DSettings) error {
+	os.RemoveAll(filepath.Join(dir, cfMusicOldSubdir))
 	if d.CFMusic {
 		out := filepath.Join(dir, cfMusicSubdir)
 		if err := os.MkdirAll(out, 0755); err != nil {
