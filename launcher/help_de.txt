@@ -110,7 +110,7 @@ WELT VERLASSEN :: Verlässt das Spiel und bringt dich ins vorherige Menü.
 SETUP :: Ein eingeschränktes Setup, in dem du Spieleinstellungen ändern kannst.
 
 = Steuerung
-Jeder hat seine Lieblingsbelegung – passe die Standardeinstellungen im Setup unter Steuerung an deine Gewohnheiten an. Die Vorgaben:
+Die Belegung stellst du im Launcher unter Steuerung ein: „WASD + Maus“ (A/D lenken, das Mausrad wechselt die Waffe) ist voreingestellt, „Klassisch“ stellt die Originalbelegung wieder her. Im Spiel geht es unter Setup → Steuerung. Die klassische Belegung:
 PFEIL LINKS / RECHTS :: Lenkt den Gleiter nach links oder rechts.
 PFEIL OBEN / UNTEN :: Lenkt den Gleiter nach oben oder unten.
 E :: Rollen um die Längsachse.

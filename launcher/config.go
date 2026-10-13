@@ -11,7 +11,7 @@ import (
 
 // configVersion steigt, wenn sich eine Vorgabe ändert, die auch bereits
 // gespeicherte Konfigurationen übernehmen sollen. Siehe migrateConfig.
-const configVersion = 2
+const configVersion = 3
 
 // AppConfig hält alle Einstellungen der Anwendung.
 type AppConfig struct {
@@ -45,6 +45,10 @@ type AppConfig struct {
 	// Direct3D-Schicht – Quelle ist die clusterball_d3d.ini neben der
 	// Clusterball.exe, nicht diese Datei
 	D3D D3DSettings
+
+	// Tastenbelegung: Aktion der config.cfg -> Tastenname des Spiels. Quelle ist
+	// die config.cfg, nicht diese Datei; siehe controls.go.
+	Bindings map[string]string
 }
 
 // defaultConfig übernimmt die Vorgaben des alten XDreamCC (XDreamCC.ini,
@@ -252,6 +256,7 @@ func readAppConfigFrom(cfg *AppConfig, path string) {
 // gehoben. Nötig ist das, weil diese Werte aus der config.cfg des Spiels
 // kommen – ein geänderter Vorgabewert im Launcher würde sie sonst nie
 // erreichen. Was danach umgestellt wird, bleibt so.
+// Version 3: Tastenbelegung WASD + Maus, siehe unten.
 func migrateConfig(cfg *AppConfig) {
 	if cfg.Version < 2 {
 		cfg.GraphicalQuality = defaultConfig.GraphicalQuality
@@ -260,6 +265,11 @@ func migrateConfig(cfg *AppConfig) {
 		cfg.TrilinearMipmap = defaultConfig.TrilinearMipmap
 		cfg.Force32BitTex = defaultConfig.Force32BitTex
 		cfg.ClampTexture = defaultConfig.ClampTexture
+	}
+	// Version 3: WASD + Maus statt der Auslieferungsbelegung - aber nur, wenn
+	// noch genau die Auslieferungsbelegung eingestellt ist.
+	if cfg.Version < 3 && len(cfg.Bindings) > 0 && sameBindings(cfg.Bindings, presetClassic) {
+		cfg.Bindings = presetIn(presetWASD, bindingsLang(cfg.Bindings))
 	}
 	cfg.Version = configVersion
 }

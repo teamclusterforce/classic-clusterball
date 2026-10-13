@@ -240,6 +240,9 @@ func applyD3DSettings(ini *IniFile, d *D3DSettings) {
 	ini.Set("AmbientOcclusion", boolStr(d.AmbientOcc))
 	ini.Set("MouseScale", strconv.FormatFloat(d.MouseScale, 'f', 2, 64))
 	ini.Set("Gamma", strconv.FormatFloat(float64(d.Gamma)/100, 'f', 2, 64))
+	// Mausrad als F11/F12 fuer die Belegung, siehe controls.go.
+	ini.Set("WheelUp", strconv.Itoa(wheelUpDIK))
+	ini.Set("WheelDown", strconv.Itoa(wheelDownDIK))
 }
 
 // normalizeResolution bringt "1920 x 1080" o.ä. auf "1920x1080"; leer und

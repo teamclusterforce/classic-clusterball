@@ -321,7 +321,7 @@ static void dump_bmp(int sec) {
 }
 
 // Test script (CB_SCRIPT=file): lines "<ms since first frame> <cmd> [args]" with the commands
-//   move <dx> <dy> | click | keydown <DIK> | keyup <DIK> | shot <name> | quit
+//   move <dx> <dy> | click | keydown <DIK> | keyup <DIK> | wheel <notches> | shot <name> | quit
 typedef struct { DWORD ms; char cmd[12]; char arg[48]; } ScriptLine;
 static ScriptLine *g_script;
 static int g_script_n, g_script_pos;
@@ -395,6 +395,7 @@ static int script_tick(DWORD t) { // returns 1 when a named shot is due this fra
         else if (!strcmp(s->cmd, "click")) inj_mouse(1, 0, 0);
         else if (!strcmp(s->cmd, "keydown")) g_inj_keys[a & 255] = 1;
         else if (!strcmp(s->cmd, "keyup")) g_inj_keys[a & 255] = 0;
+        else if (!strcmp(s->cmd, "wheel")) { extern long g_inj_wheel; g_inj_wheel += a * 120; } // notches, + = up
         else if (!strcmp(s->cmd, "shot")) { snprintf(g_shot_name, sizeof g_shot_name, "%s", s->arg); shot = 1; }
         else if (!strcmp(s->cmd, "quit")) ExitProcess(0);
         else if (!strcmp(s->cmd, "set")) { // set <name> <value>: change a backend setting at run time
@@ -561,6 +562,44 @@ BYTE g_inj_keys[256];     // DIK scan codes held down
 static void *g_kbd_dev;
 int g_script_mode;
 
+// --- Mouse wheel. The game knows no wheel: its key table has mouse buttons 1-4 only, and it ignores the lZ of its
+// DirectInput mouse. Each wheel notch therefore becomes a short press of a keyboard key (WheelUp / WheelDown in
+// clusterball_d3d.ini, DirectInput scan codes, 0 = off) - the launcher binds the wanted action to that key. A press
+// lasts a few keyboard polls and is followed by as many released ones, so the game sees every notch as its own key
+// press; notches beyond a small backlog are dropped instead of firing long after the wheel stopped.
+long g_inj_wheel;                 // test driver: wheel counts still to feed in (120 per notch)
+static int g_wheel_dik[2];        // [0] up, [1] down
+static long g_wheel_acc;          // wheel counts not yet a whole notch
+static int g_wheel_queue;         // pending notches, + = up
+static int g_wheel_key, g_wheel_polls; // key being pressed and polls left in the current phase (down, then up)
+static int g_wheel_down;
+
+static void wheel_feed(long dz) {
+    if (!dz || (!g_wheel_dik[0] && !g_wheel_dik[1])) return;
+    g_wheel_acc += dz;
+    long n = g_wheel_acc / 120;
+    g_wheel_acc -= n * 120;
+    g_wheel_queue += (int)n;
+    if (g_wheel_queue > 3) g_wheel_queue = 3;
+    if (g_wheel_queue < -3) g_wheel_queue = -3;
+}
+
+static void wheel_keys(BYTE *k) {
+    if (g_wheel_polls > 0) {
+        if (g_wheel_down) k[g_wheel_key] = 0x80;
+        if (--g_wheel_polls == 0 && g_wheel_down) { g_wheel_down = 0; g_wheel_polls = 3; }
+        return;
+    }
+    if (!g_wheel_queue) return;
+    int up = g_wheel_queue > 0;
+    g_wheel_queue += up ? -1 : 1;
+    int dik = g_wheel_dik[up ? 0 : 1];
+    if (dik <= 0 || dik > 255) return;
+    g_wheel_key = dik; g_wheel_down = 1; g_wheel_polls = 3;
+    k[dik] = 0x80;
+    g_wheel_polls--;
+}
+
 static long step(long *p) {
     long v = *p > 300 ? 300 : *p < -300 ? -300 : *p;
     *p -= v;
@@ -596,10 +635,13 @@ static HRESULT WINAPI my_GetDeviceState(void *self, DWORD cb, void *data) {
         m[1] = scale_delta(m[1], &g_acc_y) + idy;
         if (ib && cb >= 16) ((BYTE *)data)[12] = 0x80;
         g_sum_x += labs(m[0]); g_sum_y += labs(m[1]); g_calls_state++;
+        m[2] += g_inj_wheel; g_inj_wheel = 0;
+        wheel_feed(m[2]);
     }
     if (self == g_kbd_dev && SUCCEEDED(hr) && cb == 256) {
         BYTE *k = data;
         for (int i = 0; i < 256; i++) if (g_inj_keys[i]) k[i] = 0x80;
+        wheel_keys(k);
     }
     return hr;
 }
@@ -611,6 +653,7 @@ static HRESULT WINAPI my_GetDeviceData(void *self, DWORD cb, void *rgdod, DWORD 
             DWORD *od = (DWORD *)((BYTE *)rgdod + i * cb); // dwOfs, dwData, ...
             if (od[0] == 0) { od[1] = (DWORD)scale_delta((LONG)od[1], &g_acc_x); g_sum_x += labs((LONG)od[1]); }
             else if (od[0] == 4) { od[1] = (DWORD)scale_delta((LONG)od[1], &g_acc_y); g_sum_y += labs((LONG)od[1]); }
+            else if (od[0] == 8) wheel_feed((LONG)od[1]);
         }
         g_calls_data++;
     }
@@ -685,6 +728,9 @@ void compat_init(void) {
         // DirectInput delivers raw counts and ignores the Windows pointer speed; apply it explicitly (speed 10 = 1.0,
         // the same table Windows uses without "enhance pointer precision"), times a base factor for this game.
         g_mouse_scale = cfg_num("CB_MOUSE", "MouseScale", 0.35);
+        g_wheel_dik[0] = (int)cfg_num("CB_WHEELUP", "WheelUp", 0);
+        g_wheel_dik[1] = (int)cfg_num("CB_WHEELDOWN", "WheelDown", 0);
+        CLOG("mouse wheel: up -> key %d, down -> key %d", g_wheel_dik[0], g_wheel_dik[1]);
         if (cfg_num("CB_MOUSEWIN", "MouseFollowWindows", 1) != 0) {
             static const double k_speed[21] = {0, 1 / 32., 1 / 16., 1 / 8., 2 / 8., 3 / 8., 4 / 8., 5 / 8., 6 / 8., 7 / 8., 1.0,
                                                1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5};

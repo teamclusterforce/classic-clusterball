@@ -46,6 +46,9 @@ Because it sits exactly where the game draws, it does what a wrapper cannot:
 - **Modern presentation:** DXGI flip model, borderless fullscreen at the
   monitor's native resolution without a mode switch, window mode, and
   Alt+Enter to switch while playing
+- **Mouse wheel:** the game has no wheel binding; the renderer turns each notch
+  into a short press of a key (the launcher uses F11/F12), so it can put
+  actions such as switching weapons on the wheel
 - **Fixes around the picture:** mouse via DirectInput with the Windows pointer
   speed, no self-minimising, no crash on the game's display-mode probing
   (uninitialised `DEVMODE`, 16-bit modes, oversized texture probe)
@@ -120,9 +123,17 @@ replaces the old `XDreamCC.ini`.
   with the master server (protocol reconstructed via reverse engineering)
 - Graphics settings: fullscreen or window, resolution, anti-aliasing,
   supersampling, anisotropic filtering, texture pack, sharpness, VSync, sharp
-  font, ambient occlusion; detail level, brightness and mouse sensitivity
+  font, ambient occlusion; brightness and mouse sensitivity (the game's detail
+  level is always set to High)
+- Controls: key bindings with drawn keys and mouse symbols, presets
+  "WASD + mouse" (default) and "Classic", any key, mouse button or the mouse
+  wheel per action; written to the game's `config.cfg` in its own key names
 - Detection of the own external IP for hosting
-- User interface in German and English, switchable at runtime
+- Help: the game-related part of the manual from clusterball.de, built in
+  (German and English); About: what Re-Enhanced is and its successor
+  ClusterForce
+- User interface in German and English: follows the Windows language on the
+  first start, DE | EN switch in the tab bar
 
 ### Installation
 

@@ -54,6 +54,7 @@ const (
 	tabEinstellungen = 1
 	tabHilfe         = 2
 	tabUeber         = 3
+	tabSteuerung     = 4
 )
 
 // Feste Hoehen der Kopfbereiche. Beide Composites werden auf exakt diese
@@ -217,6 +218,8 @@ type AppWindow struct {
 	panelEinstellungen *walk.Composite
 	panelHilfe         *walk.Composite
 	panelUeber         *walk.Composite
+	panelSteuerung     *walk.Composite
+	controls           *controlsView
 	help               *helpView
 	about              *helpView // Reiter "Über", gleiche Darstellung ohne Kapitelleiste
 
@@ -370,6 +373,7 @@ func (mw *AppWindow) build() error {
 	mw.hostModel = NewHostListModel()
 	mw.help = newHelpView(mw, helpDE, helpEN, true)
 	mw.about = newHelpView(mw, aboutDE, aboutEN, false)
+	mw.controls = newControlsView(mw)
 
 	// Aktiver/inaktiver Reiter: gleiche Groesse, nur Bold wechselt, damit die
 	// Leiste beim Umschalten ruhig bleibt.
@@ -380,6 +384,8 @@ func (mw *AppWindow) build() error {
 		{key: "tab.game", active: func() bool { return mw.activeTab == tabSpiel }, onClick: func() { mw.showTab(tabSpiel) }},
 		{key: "tab.settings", active: func() bool { return mw.activeTab == tabEinstellungen },
 			onClick: func() { mw.showTab(tabEinstellungen) }},
+		{key: "tab.controls", active: func() bool { return mw.activeTab == tabSteuerung },
+			onClick: func() { mw.showTab(tabSteuerung) }},
 		// Das Handbuch im Launcher, siehe help.go.
 		{key: "tab.help", active: func() bool { return mw.activeTab == tabHilfe }, onClick: func() { mw.showTab(tabHilfe) }},
 		{key: "tab.about", active: func() bool { return mw.activeTab == tabUeber }, onClick: func() { mw.showTab(tabUeber) }},
@@ -422,6 +428,7 @@ func (mw *AppWindow) build() error {
 					mw.einstellungenPanel(),
 					mw.help.panel(&mw.panelHilfe),
 					mw.about.panel(&mw.panelUeber),
+					mw.controls.panel(&mw.panelSteuerung),
 				},
 			},
 		},
@@ -449,6 +456,7 @@ func (mw *AppWindow) build() error {
 	mw.langToggle.SetCursor(walk.CursorHand())
 	mw.help.attach()
 	mw.about.attach()
+	mw.controls.attach()
 
 	// Die Statusleiste zeichnet beim Breiterziehen nur den neuen Streifen; der
 	// Bereich rechts vom letzten Feld behielt so jeden alten Groessengriff
@@ -536,8 +544,9 @@ func (mw *AppWindow) tabBar() Widget {
 		Children: []Widget{
 			mw.tabWidget(mw.tabs[0], 110),
 			mw.tabWidget(mw.tabs[1], 140),
-			mw.tabWidget(mw.tabs[2], 90),
-			mw.tabWidget(mw.tabs[3], 80),
+			mw.tabWidget(mw.tabs[2], 120),
+			mw.tabWidget(mw.tabs[3], 90),
+			mw.tabWidget(mw.tabs[4], 80),
 			HSpacer{},
 			mw.langWidget(),
 			HSpacer{Size: gutter - 6},
@@ -1042,6 +1051,7 @@ func (mw *AppWindow) retranslate() {
 	mw.langToggle.Invalidate()
 	mw.help.retranslate()
 	mw.about.retranslate()
+	mw.controls.retranslate()
 
 	mw.t.accPlayer.SetText(tr("acc.player"))
 	mw.t.accPassword.SetText(tr("acc.password"))
@@ -1183,6 +1193,10 @@ func (mw *AppWindow) showTab(tab int) {
 	mw.panelEinstellungen.SetVisible(tab == tabEinstellungen)
 	mw.panelHilfe.SetVisible(tab == tabHilfe)
 	mw.panelUeber.SetVisible(tab == tabUeber)
+	mw.panelSteuerung.SetVisible(tab == tabSteuerung)
+	if tab != tabSteuerung {
+		mw.controls.stopCapture()
+	}
 	for _, t := range mw.tabs {
 		t.w.Invalidate()
 	}

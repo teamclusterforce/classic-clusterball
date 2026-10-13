@@ -152,6 +152,7 @@ func readGameSettings(cfg *AppConfig) {
 	cfg.TrilinearMipmap = g.Bool("trilinearmipmap", cfg.TrilinearMipmap)
 	cfg.Force32BitTex = g.Bool("force32BitTexture", cfg.Force32BitTex)
 	cfg.ClampTexture = g.Bool("clamp_texture", cfg.ClampTexture)
+	cfg.Bindings = readBindings(g)
 }
 
 // gameRenderer ist der Renderer-Eintrag der config.cfg fuer den OpenGL-Pfad,
@@ -187,6 +188,7 @@ func writeGameSettings(cfg *AppConfig) error {
 	g.SetBool("trilinearmipmap", cfg.TrilinearMipmap)
 	g.SetBool("force32BitTexture", cfg.Force32BitTex)
 	g.SetBool("clamp_texture", cfg.ClampTexture)
+	writeBindings(g, cfg.Bindings)
 
 	return g.Save(path)
 }

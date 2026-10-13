@@ -111,7 +111,7 @@ LEAVE WORLD :: Leaves the game and takes you back to the previous menu.
 SETUP :: A reduced setup where you can change game settings.
 
 = Controls
-Everyone has their favourite layout – adapt the defaults in Setup under Controls. The defaults:
+Set your keys in the launcher under Controls: "WASD + mouse" (A/D steer, the mouse wheel switches weapons) is the default, "Classic" restores the original layout. In the game it is under Setup → Controls. The classic layout:
 LEFT / RIGHT ARROW :: Steer left or right.
 UP / DOWN ARROW :: Steer up or down.
 E :: Roll around the longitudinal axis.
