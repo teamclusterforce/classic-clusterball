@@ -92,13 +92,41 @@ func localCBExe() string {
 	return filepath.Join(dir, "Clusterball.exe")
 }
 
-// configPath gibt den Pfad zur Konfigurationsdatei zurück.
-func configPath() string {
+// Die Einstellungen des Launchers liegen neben ihm in clusterball.ini.
+// Frühere Versionen schrieben sie nach xdreamcc.cfg: die wird gelesen,
+// solange es noch keine clusterball.ini gibt, und nach dem ersten
+// Speichern gelöscht.
+const (
+	configName       = "clusterball.ini"
+	legacyConfigName = "xdreamcc.cfg"
+)
+
+// appDir ist das Verzeichnis des Launchers.
+func appDir() string {
 	exe, err := os.Executable()
 	if err != nil {
-		return "xdreamcc.cfg"
+		return "."
 	}
-	return filepath.Join(filepath.Dir(exe), "xdreamcc.cfg")
+	return filepath.Dir(exe)
+}
+
+// configPath gibt den Pfad zur Konfigurationsdatei zurück.
+func configPath() string { return filepath.Join(appDir(), configName) }
+
+// configToRead nennt die Datei, aus der die Einstellungen kommen: die
+// clusterball.ini, sonst die alte xdreamcc.cfg, sonst keine ("").
+func configToRead(dir string) string {
+	for _, n := range []string{configName, legacyConfigName} {
+		if p := filepath.Join(dir, n); fileExists(p) {
+			return p
+		}
+	}
+	return ""
+}
+
+func fileExists(p string) bool {
+	st, err := os.Stat(p)
+	return err == nil && !st.IsDir()
 }
 
 // cbExeDir gibt das Verzeichnis der Clusterball-EXE zurück.
@@ -135,9 +163,14 @@ func LoadConfig() AppConfig {
 	return cfg
 }
 
-// readAppConfig liest xdreamcc.cfg, sofern es sie gibt.
-func readAppConfig(cfg *AppConfig) {
-	f, err := os.Open(configPath())
+// readAppConfig liest die Einstellungen des Launchers, sofern es sie gibt.
+func readAppConfig(cfg *AppConfig) { readAppConfigFrom(cfg, configToRead(appDir())) }
+
+func readAppConfigFrom(cfg *AppConfig, path string) {
+	if path == "" {
+		return
+	}
+	f, err := os.Open(path)
 	if err != nil {
 		return
 	}
@@ -226,14 +259,29 @@ func migrateConfig(cfg *AppConfig) {
 }
 
 // SaveConfig speichert die Konfiguration in die Datei.
-func SaveConfig(cfg *AppConfig) error {
-	f, err := os.Create(configPath())
+func SaveConfig(cfg *AppConfig) error { return saveConfigIn(cfg, appDir()) }
+
+// saveConfigIn schreibt clusterball.ini in dir und löscht danach eine alte
+// xdreamcc.cfg - erst wenn die neue Datei vollständig geschrieben ist.
+func saveConfigIn(cfg *AppConfig, dir string) error {
+	if err := writeConfig(cfg, filepath.Join(dir, configName)); err != nil {
+		return err
+	}
+	if old := filepath.Join(dir, legacyConfigName); fileExists(old) {
+		os.Remove(old)
+	}
+	return nil
+}
+
+func writeConfig(cfg *AppConfig, path string) error {
+	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
 	w := bufio.NewWriter(f)
+	fmt.Fprintf(w, "# Clusterball Re-Enhanced - Einstellungen des Launchers (ClusterballCC.exe)\n")
 	fmt.Fprintf(w, "config_version=%d\n", configVersion)
 	fmt.Fprintf(w, "server_mode=%s\n", cfg.ServerMode)
 	fmt.Fprintf(w, "server_ip=%s\n", cfg.ServerIP)

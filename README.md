@@ -127,7 +127,8 @@ replaces the old `XDreamCC.ini`.
 Copy `ClusterballCC.exe` into the game folder, next to `Clusterball.exe`, and
 start it. There is nothing to point it to: it always uses the
 `Clusterball.exe` next to itself. Its own configuration is stored there as
-well (`xdreamcc.cfg`).
+well (`clusterball.ini`; an `xdreamcc.cfg` of earlier versions is taken over
+and removed on the first save).
 
 The game folder needs only `Clusterball.exe` (with its `.manifest`),
 `Data.mrg`, `Local.mrg`, `Bass.dll`, `a3d.dll`, `a3dapi.dll`, `config.cfg`
@@ -157,7 +158,7 @@ directory, `_release` by default. Without Zig the committed
 `launcher\layer\opengl32.dll` is used. To build the renderer manually:
 
     cd modern-renderer
-    zig cc -target x86-windows-gnu -shared -O2 -o opengl32.dll gld3d.c pass.c compat.c -ld3d11 -ldxgi -ldxguid -lgdi32 -luser32
+    zig cc -target x86-windows-gnu -shared -O2 -o opengl32.dll gld3d.c pass.c compat.c appicon.c -ld3d11 -ldxgi -ldxguid -lgdi32 -luser32
 
 `pass.c` (pass-through stubs for the exports of `opengl32.dll` the game
 never calls, needed because GLU32.dll binds to the file by name) is generated
