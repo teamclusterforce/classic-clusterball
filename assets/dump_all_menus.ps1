@@ -1,4 +1,4 @@
-# tools/dump_all_menus.ps1
+# assets/dump_all_menus.ps1
 # Plays through every menu screen, tab and hover state, a 1-minute LAN match and a 1-minute training with
 # TextureDump=1, so all textures of the current language - including the text pictures the game composes at run
 # time - land in <GameDir>\textures\dump, and everything drawn in 2D is listed in textures\ui_textures.txt.
@@ -7,7 +7,7 @@
 # -English: moves Local.mrg aside for the run, the game then uses the English base texts in Data.mrg.
 # config.cfg and Local.mrg are restored afterwards.
 #
-#   powershell -File tools\dump_all_menus.ps1 -GameDir C:\clusterball [-English]
+#   powershell -File assets\dump_all_menus.ps1 -GameDir C:\clusterball [-English]
 param([Parameter(Mandatory)][string]$GameDir, [switch]$English)
 
 $tag = if ($English) { 'en' } else { 'de' }

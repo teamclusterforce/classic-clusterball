@@ -5,8 +5,8 @@ _release/
 # Local launcher configuration (contains account credentials)
 xdreamcc.cfg
 
-# Layer build output
-layer/_build/
+# Renderer build output
+modern-renderer/_build/
 
 # Third-party and built texture pack tools
-tools/bin/
+assets/bin/

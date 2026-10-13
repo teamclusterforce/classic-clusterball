@@ -1,10 +1,10 @@
-# tools/build_texture_pack.ps1
+# assets/build_texture_pack.ps1
 # Builds the high-resolution texture packs from <GameDir>\textures\dump (written by the game with TextureDump=1,
 # see dump_all_menus.ps1): Real-ESRGAN 4x (pack "hd") and optionally a second 4x pass (pack "hd16"), then BC7 with
 # mipmaps via texconv. Only textures without a result yet are processed, so the script can be re-run after new dumps.
 # Afterwards run build_ui_pack.ps1 for the textures drawn in 2D (menus, HUD).
 #
-#   powershell -File tools\build_texture_pack.ps1 -GameDir C:\clusterball [-Hd16]
+#   powershell -File assets\build_texture_pack.ps1 -GameDir C:\clusterball [-Hd16]
 param([Parameter(Mandatory)][string]$GameDir, [switch]$Hd16)
 
 # Not 'Stop': Windows PowerShell 5.1 turns any stderr line of a native tool (Real-ESRGAN prints its GPU info there)

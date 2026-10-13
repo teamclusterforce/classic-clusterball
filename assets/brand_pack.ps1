@@ -1,9 +1,9 @@
-# tools/brand_pack.ps1
-# Puts the Clusterball Re-Enhanced and Team ClusterForce marks into the texture packs: tools\cmd\brand draws them
+# assets/brand_pack.ps1
+# Puts the Clusterball Re-Enhanced and Team ClusterForce marks into the texture packs: assets\cmd\brand draws them
 # into the upscaled menu textures (<GameDir>\textures\up, up16 -> textures\brand\up, brand\up16), texconv
 # compresses those into textures\hd and hd16. Run it after build_texture_pack.ps1 / build_ui_pack.ps1.
 #
-#   powershell -File tools\brand_pack.ps1 -GameDir C:\clusterball
+#   powershell -File assets\brand_pack.ps1 -GameDir C:\clusterball
 param([Parameter(Mandatory)][string]$GameDir)
 
 $ErrorActionPreference = 'Continue'

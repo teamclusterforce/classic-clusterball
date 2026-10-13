@@ -1,4 +1,4 @@
-# tools/build_ui_pack.ps1
+# assets/build_ui_pack.ps1
 # Rebuilds the textures drawn in 2D (menus, HUD, text pictures; listed by TextureDump in textures\ui_textures.txt).
 # Each is upscaled with both Real-ESRGAN models: x4plus-anime (drawn art: clean edges) and x4plus (photo model:
 # keeps every pixel step). pickmodel box-filters both back to the original size and keeps anime unless it deviates
@@ -8,7 +8,7 @@
 # bleed into edges or mipmaps. Pictures larger than -MaxSize stay with the normal pack.
 # Writes up/up16 (PNG) and hd/hd16 (BC7 with mipmaps), replacing what build_texture_pack.ps1 made for them.
 #
-#   powershell -File tools\build_ui_pack.ps1 -GameDir C:\clusterball [-Hd16]
+#   powershell -File assets\build_ui_pack.ps1 -GameDir C:\clusterball [-Hd16]
 param([Parameter(Mandatory)][string]$GameDir, [int]$MaxSize = 256, [double]$Factor = 1.12, [switch]$Hd16)
 
 $ErrorActionPreference = 'Continue'

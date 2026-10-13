@@ -1,8 +1,8 @@
-# tools/packtools.ps1
-# Shared paths for the texture pack scripts. Third-party programs live in tools\bin (not in the repository):
+# assets/packtools.ps1
+# Shared paths for the texture pack scripts. Third-party programs live in assets\bin (not in the repository):
 #   bin\esrgan\realesrgan-ncnn-vulkan.exe + bin\esrgan\models\  (Real-ESRGAN ncnn Vulkan, release zip)
 #   bin\texconv.exe                                            (DirectXTex texconv)
-# bleed.exe and pickmodel.exe are built from tools\cmd on first use.
+# bleed.exe and pickmodel.exe are built from assets\cmd on first use.
 
 $ToolsBin = Join-Path $PSScriptRoot 'bin'
 $Esrgan = Join-Path $ToolsBin 'esrgan\realesrgan-ncnn-vulkan.exe'
@@ -13,7 +13,7 @@ function Require-Tool([string]$path, [string]$what) {
     if (-not (Test-Path $path)) { throw "$what not found: $path (see README, section Texture packs)" }
 }
 
-# Builds tools\bin\<name>.exe from tools\cmd\<name> and returns its path. Always built (Go's cache makes that
+# Builds assets\bin\<name>.exe from assets\cmd\<name> and returns its path. Always built (Go's cache makes that
 # quick): a tool left over from an older checkout would silently do what the old source did.
 function Get-GoTool([string]$name) {
     $exe = Join-Path $ToolsBin "$name.exe"

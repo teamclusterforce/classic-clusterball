@@ -9,7 +9,7 @@ import (
 
 // Die Direct3D-Schicht: eine opengl32.dll, die Clusterball.exe neben sich
 // lädt und die die OpenGL-Aufrufe des Spiels auf Direct3D 11 umsetzt (Quelle
-// im Ordner layer/ des Repositorys, gebaut von build.cmd). Der Launcher
+// im Ordner modern-renderer/ des Repositorys, gebaut von build.cmd). Der Launcher
 // bringt sie mit und legt sie vor jedem Start neben das Spiel.
 //
 //go:embed layer/opengl32.dll

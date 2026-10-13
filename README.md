@@ -6,12 +6,12 @@ and online via [clusterball.de](http://www.clusterball.de).
 
 The repository has two parts:
 
-- [layer/](layer/) - the **Direct3D 11 renderer**. Clusterball.exe only loads
+- [modern-renderer/](modern-renderer/) - the **Direct3D 11 renderer**. Clusterball.exe only loads
   a graphics library named `opengl32.dll` from its own folder, so the renderer
   carries that file name; it implements the drawing calls the game makes on
   Direct3D 11 and fixes what keeps the game from running properly on current
   Windows.
-- [commandcenter/](commandcenter/) - the launcher **Command Center**
+- [launcher/](launcher/) - the launcher **Command Center**
   (`ClusterballCC.exe`). It brings the renderer along, installs it next to the
   game and configures it.
 
@@ -40,7 +40,7 @@ runs on Direct3D 11.
 
 All settings live in `clusterball_d3d.ini` next to `Clusterball.exe`; the
 template with every key and its meaning is
-[commandcenter/layer/clusterball_d3d.ini](commandcenter/layer/clusterball_d3d.ini).
+[launcher/layer/clusterball_d3d.ini](launcher/layer/clusterball_d3d.ini).
 An environment variable `CB_<NAME>` overrides a value (e.g. `CB_RES=1920x1080`).
 
 ## Command Center
@@ -94,54 +94,54 @@ library walk), and [Zig](https://ziglang.org) 0.17 for the renderer.
 
     build.cmd [output directory]
 
-This builds the renderer (`layer\` into `commandcenter\layer\opengl32.dll`,
+This builds the renderer (`modern-renderer\` into `launcher\layer\opengl32.dll`,
 which the Command Center embeds) and `ClusterballCC.exe` into the output
 directory, `_release` by default. Without Zig the committed
-`commandcenter\layer\opengl32.dll` is used. To build the renderer manually:
+`launcher\layer\opengl32.dll` is used. To build the renderer manually:
 
-    cd layer
+    cd modern-renderer
     zig cc -target x86-windows-gnu -shared -O2 -o opengl32.dll gld3d.c pass.c compat.c -ld3d11 -ldxgi -ldxguid -lgdi32 -luser32
 
 `pass.c` (pass-through stubs for the exports of `opengl32.dll` the game
 never calls, needed because GLU32.dll binds to the file by name) is generated
-by `layer\gen` from the system's `opengl32.dll`.
+by `modern-renderer\gen` from the system's `opengl32.dll`.
 
 ### Tests
 
-    cd commandcenter
+    cd launcher
     go test ./...
 
 ## Texture packs
 
 The packs are made from the game's own textures and are therefore not part
-of this repository. The scripts in [tools/](tools/) build them:
+of this repository. The scripts in [assets/](assets/) build them:
 
-1. `tools\dump_all_menus.ps1 -GameDir <game folder>` plays through every
+1. `assets\dump_all_menus.ps1 -GameDir <game folder>` plays through every
    menu, a LAN match and a training with `TextureDump=1`; repeat with
    `-English` for the English texts. Textures land in `textures\dump`, the
    ones drawn in 2D are listed in `textures\ui_textures.txt`.
-2. `tools\build_texture_pack.ps1 -GameDir <game folder> -Hd16` upscales them
+2. `assets\build_texture_pack.ps1 -GameDir <game folder> -Hd16` upscales them
    with Real-ESRGAN and compresses them to BC7 (`textures\hd`, `textures\hd16`).
-3. `tools\build_ui_pack.ps1 -GameDir <game folder> -Hd16` rebuilds the 2D
+3. `assets\build_ui_pack.ps1 -GameDir <game folder> -Hd16` rebuilds the 2D
    textures, choosing per texture between the models for drawn art and
-   photos (`tools\cmd\pickmodel`).
-4. `tools\brand_pack.ps1 -GameDir <game folder>` adds the Clusterball
+   photos (`assets\cmd\pickmodel`).
+4. `assets\brand_pack.ps1 -GameDir <game folder>` adds the Clusterball
    Re-Enhanced and Team ClusterForce marks to the menu header, the menu bar
    and the loading box and redraws the menu words and the game menu's tab
-   labels sharp (`tools\cmd\brand`, with the Michroma font under the
+   labels sharp (`assets\cmd\brand`, with the Michroma font under the
    SIL Open Font License).
 
-Third-party programs go into `tools\bin` (not in the repository):
+Third-party programs go into `assets\bin` (not in the repository):
 [Real-ESRGAN ncnn Vulkan](https://github.com/xinntao/Real-ESRGAN/releases)
-as `tools\bin\esrgan\` (with its `models` folder) and
+as `assets\bin\esrgan\` (with its `models` folder) and
 [texconv](https://github.com/microsoft/DirectXTex/releases) as
-`tools\bin\texconv.exe`.
+`assets\bin\texconv.exe`.
 
 ## Development tools
 
-[dev/](dev/) holds what was used to get there: the OpenGL call tracer, the
+[tools/](tools/) holds what was used to get there: the OpenGL call tracer, the
 former Glide stub, small analysis programs and the renderer's test scripts.
-See [dev/README.md](dev/README.md).
+See [tools/README.md](tools/README.md).
 
 ## Dependencies
 
@@ -152,6 +152,7 @@ See [dev/README.md](dev/README.md).
 | [golang.org/x/image](https://pkg.go.dev/golang.org/x/image) | Font rendering for the sharp font | BSD-3-Clause |
 | [golang.org/x/text](https://pkg.go.dev/golang.org/x/text) | Character maps (used by x/image) | BSD-3-Clause |
 | [golang.org/x/sys](https://pkg.go.dev/golang.org/x/sys) | System calls (used by walk) | BSD-3-Clause |
+| [golang.org/x/arch](https://pkg.go.dev/golang.org/x/arch) | x86 disassembler of the analysis tools in `tools/` | BSD-3-Clause |
 | [gopkg.in/Knetic/govaluate.v3](https://github.com/Knetic/govaluate) | Expression evaluation (used by walk) | MIT |
 
 The renderer uses only Windows system libraries (Direct3D 11, DXGI, the

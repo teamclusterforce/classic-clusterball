@@ -1,6 +1,6 @@
 // brand -game <game folder>: draws the Clusterball Re-Enhanced and Team ClusterForce marks into the upscaled menu
 // textures (<game>\textures\up and up16, made by build_texture_pack.ps1 / build_ui_pack.ps1) and writes them to
-// <game>\textures\brand\up and brand\up16; tools\brand_pack.ps1 compresses those into the hd/hd16 packs.
+// <game>\textures\brand\up and brand\up16; assets\brand_pack.ps1 compresses those into the hd/hd16 packs.
 // The sources stay untouched, so the tool can run again after the packs were rebuilt.
 //
 // Marks (positions in the game's own pixels, measured on the original textures):
