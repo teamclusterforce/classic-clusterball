@@ -9,7 +9,8 @@ changing the game:
 - a Direct3D 11 renderer: sharp at the monitor's native resolution up to 4K,
   anti-aliasing, high-resolution textures, crisp menu and HUD text
 - a launcher: server list, graphics settings, key bindings (WASD + mouse,
-  mouse wheel), the game's manual built in, English and German
+  mouse wheel), the game's manual built in, English and German - the game
+  starts in the language chosen in the launcher
 - optionally music and ball sounds from ClusterForce, a spiritual successor
   to Clusterball
 

@@ -117,3 +117,37 @@ func TestBelegungInConfigCfg(t *testing.T) {
 		t.Errorf("Anzeige: %d %q", k, label)
 	}
 }
+
+// Beim Start in der Sprache des Launchers stehen die Tastennamen der
+// config.cfg in derselben Sprache; Buchstaben, F-Tasten und der Rest der
+// Datei bleiben.
+func TestBelegungInSpielsprache(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.cfg")
+	orig := "game_volume 50.000000\nroll e\nrelease_balls Leertaste\nfire Linke Maustaste\nnext_weapon F11\n"
+	if err := os.WriteFile(path, []byte(orig), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &AppConfig{CBExePath: filepath.Join(dir, "Clusterball.exe"), Language: "en",
+		Bindings: map[string]string{"release_balls": "Leertaste"}}
+	if err := bindingsToGameLanguage(cfg); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(path)
+	s := string(data)
+	for _, want := range []string{"release_balls Space\n", "fire Left mouse btn\n", "roll e\n", "next_weapon F11\n", "game_volume 50.000000\n"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("%q fehlt in\n%q", want, s)
+		}
+	}
+	if cfg.Bindings["release_balls"] != "Space" {
+		t.Errorf("Launcher-Belegung: %q", cfg.Bindings["release_balls"])
+	}
+	cfg.Language = "de"
+	if err := bindingsToGameLanguage(cfg); err != nil {
+		t.Fatal(err)
+	}
+	if data, _ := os.ReadFile(path); !strings.Contains(string(data), "release_balls Leertaste\n") {
+		t.Errorf("zurueck nach de:\n%q", data)
+	}
+}

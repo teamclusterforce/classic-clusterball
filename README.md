@@ -16,6 +16,7 @@ game:
 - a new launcher with the server list, graphics settings, key bindings
   (WASD + mouse, mouse wheel) and the game's manual built in, in English and
   German
+- the game in English or German, following the launcher's language
 - online play via clusterball.de
 - optionally music and ball sounds from ClusterForce instead of the originals
 
@@ -179,7 +180,12 @@ replaces the old `XDreamCC.ini`. Screenshots are at the
   (German and English); About: what Re-Enhanced is and its successor
   ClusterForce
 - User interface in German and English: follows the Windows language on the
-  first start, DE | EN switch in the tab bar
+  first start, DE | EN switch in the tab bar. The game starts in the same
+  language: for English the renderer hides `Local.mrg` (the German texts) from
+  the game, which then uses the English base texts in `Data.mrg`; the launcher
+  writes the key names in `config.cfg` in that language, since the game only
+  knows the names of its current language (`Language` in
+  `clusterball_d3d.ini`)
 
 ### Installation
 

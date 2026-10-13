@@ -63,6 +63,10 @@ func prepareGame(cfg *AppConfig) (fontErr, err error) {
 	if err := writeD3DSettings(cfg); err != nil {
 		return nil, err
 	}
+	// Sprache des Spiels = Sprache des Launchers, auch fuer die Tastennamen.
+	if err := bindingsToGameLanguage(cfg); err != nil {
+		return nil, err
+	}
 	if cfg.D3D.FontReplace {
 		fontErr = ensureFontAtlas(dir)
 	}

@@ -300,8 +300,10 @@ static HMODULE WINAPI my_LoadLibraryA(LPCSTR name) {
 // ".\MUSIC\Intro.mp3"/"Outro.mp3" (two call sites, 5 arguments: mem, file, offset, length, flags). With MusicDir set
 // (clusterball_d3d.ini, relative to the game folder) a file of the same name from there is played instead, when it
 // exists; otherwise the original. DataArchive names a replacement for Data.mrg - the launcher builds one with other
-// ball sounds (Ball1-3.wav) - opened in its place when it exists. The original files are never touched.
+// ball sounds (Ball1-3.wav) - opened in its place when it exists. Language=en hides Local.mrg, the German texts:
+// without it the game falls back to the English base texts in Data.mrg. The original files are never touched.
 static char g_music_dir[MAX_PATH], g_data_archive[MAX_PATH];
+static int g_hide_local;
 static DWORD(WINAPI *real_BASS_StreamCreateFile)(BOOL, void *, DWORD, DWORD, DWORD);
 static DWORD WINAPI my_BASS_StreamCreateFile(BOOL mem, void *file, DWORD offset, DWORD length, DWORD flags) {
     char alt[MAX_PATH];
@@ -320,12 +322,16 @@ static DWORD WINAPI my_BASS_StreamCreateFile(BOOL mem, void *file, DWORD offset,
 
 static HANDLE WINAPI my_CreateFileA(LPCSTR name, DWORD acc, DWORD share, LPSECURITY_ATTRIBUTES sa, DWORD disp, DWORD fl,
                                     HANDLE tmpl) {
-    if (name && g_data_archive[0]) {
+    if (name) {
         const char *b = strrchr(name, '\\');
         b = b ? b + 1 : name;
-        if (!lstrcmpiA(b, "Data.mrg") && GetFileAttributesA(g_data_archive) != INVALID_FILE_ATTRIBUTES) {
+        if (g_data_archive[0] && !lstrcmpiA(b, "Data.mrg") && GetFileAttributesA(g_data_archive) != INVALID_FILE_ATTRIBUTES) {
             CLOG("archive: %s -> %s", name, g_data_archive);
             name = g_data_archive;
+        } else if (g_hide_local && !lstrcmpiA(b, "Local.mrg")) {
+            CLOG("language: %s hidden", name);
+            SetLastError(ERROR_FILE_NOT_FOUND);
+            return INVALID_HANDLE_VALUE;
         }
     }
     return CreateFileA(name, acc, share, sa, disp, fl, tmpl);
@@ -347,9 +353,11 @@ static void audio_init(HMODULE exe) {
     }
     if (cfg_str("CB_DATAARCHIVE", "DataArchive", v, sizeof v)) {
         snprintf(g_data_archive, sizeof g_data_archive, "%s\\%s", dir, v);
-        patch_iat(exe, "KERNEL32.dll", "CreateFileA", (void *)my_CreateFileA);
         CLOG("data archive %s", g_data_archive);
     }
+    g_hide_local = cfg_str("CB_LANGUAGE", "Language", v, sizeof v) && !lstrcmpiA(v, "en");
+    if (g_hide_local) CLOG("language en: Local.mrg hidden");
+    if (g_data_archive[0] || g_hide_local) patch_iat(exe, "KERNEL32.dll", "CreateFileA", (void *)my_CreateFileA);
 }
 
 // --- Frame statistics and framebuffer dumps (read back right before the swap, independent of what covers the window) ---

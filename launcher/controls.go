@@ -209,6 +209,36 @@ func saveBindings(cfg *AppConfig) error {
 	return g.Save(path)
 }
 
+// bindingsToGameLanguage schreibt die Tastennamen der config.cfg in der
+// Sprache, in der das Spiel startet (Language, siehe d3dcfg.go): das Spiel
+// kennt nur die Namen seiner aktuellen Namenstabelle, "Leertaste" ist im
+// englischen Spiel keine Taste.
+func bindingsToGameLanguage(cfg *AppConfig) error {
+	path := gameConfigPath(cfg)
+	if path == "" {
+		return nil
+	}
+	g, err := LoadGameConfig(path)
+	if err != nil {
+		return err
+	}
+	b := readBindings(g)
+	if len(b) == 0 {
+		return nil
+	}
+	conv := presetIn(b, cfg.Language)
+	if len(cfg.Bindings) > 0 {
+		cfg.Bindings = presetIn(cfg.Bindings, cfg.Language)
+	}
+	for _, act := range ctrlActions {
+		if conv[act] != b[act] {
+			writeBindings(g, conv)
+			return g.Save(path)
+		}
+	}
+	return nil
+}
+
 // ── Anzeige ──────────────────────────────────────────────────────────────────
 
 const (

@@ -228,6 +228,9 @@ func writeD3DSettings(cfg *AppConfig) error {
 	}
 	ini := loadD3DIni(path)
 	applyD3DSettings(ini, &cfg.D3D)
+	// Das Spiel in der Sprache des Launchers: "en" blendet die deutschen Texte
+	// (Local.mrg) aus, siehe compat.c.
+	ini.Set("Language", cfg.Language)
 	return os.WriteFile(path, []byte(ini.String()), 0644)
 }
 
