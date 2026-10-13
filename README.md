@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/logo-banner.png" alt="Clusterball Re-Enhanced" width="800"></p>
+<p align="center"><img src="docs/readme-hero.png" alt="Clusterball Re-Enhanced" width="100%"></p>
 
 Clusterball (Daydream Software, 2000) is a fast sport in the air: you fly a
 glider through a landscape, collect coloured balls into a chain behind you and
