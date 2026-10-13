@@ -71,10 +71,9 @@ var marks = []mark{
 	}},
 	// Loading box (358 x 130, stored bottom-up): Clusterball word mark at x 110-248, y 65-80 from the top; the game
 	// draws its red progress bar over rows 88-94 and "Laedt..." from row 111. The mark sits centred under the word,
-	// as wide as the word, in the bar's own red with its top edge on the bar's last row: the growing bar runs
-	// over the tops of the letters, which then hang from it.
+	// between the bar and "Laedt...", in the bar's own red.
 	{"ab219e4e8b4f5492", 358, 130, true, func(c *canvas) {
-		c.textCentered("RE-ENHANCED", barRed, 11, 179, 138, 105)
+		c.textCentered("RE-ENHANCED", barRed, 7, 179, 200, 105)
 	}},
 }
 
