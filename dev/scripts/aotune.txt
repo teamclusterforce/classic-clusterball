@@ -1,0 +1,21 @@
+2500 move -6000 -6000
+3500 move 426 127
+4500 click
+7500 move -6000 -6000
+8500 move 637 397
+9500 click
+11500 move -6000 -6000
+12500 move 637 397
+13500 click
+15500 move -6000 -6000
+16500 move 637 397
+17500 click
+40000 keydown 57
+40500 keyup 57
+46000 shot r200
+46050 set aostrength 1.2
+46050 set aoradius 400
+46300 shot r400
+46350 set aoradius 800
+46600 shot r800
+47000 quit

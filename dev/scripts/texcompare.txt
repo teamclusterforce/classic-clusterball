@@ -1,0 +1,24 @@
+2500 move -6000 -6000
+3500 move 426 127
+4500 click
+7500 move -6000 -6000
+8500 move 637 397
+9500 click
+11500 move -6000 -6000
+12500 move 637 397
+13500 click
+15500 move -6000 -6000
+16500 move 637 397
+17500 click
+40000 keydown 57
+40500 keyup 57
+46000 set texreplace 0
+46300 shot orig1
+46350 set texreplace 1
+46650 shot hd1
+48000 move 300 0
+50000 set texreplace 0
+50300 shot orig2
+50350 set texreplace 1
+50650 shot hd2
+51000 quit

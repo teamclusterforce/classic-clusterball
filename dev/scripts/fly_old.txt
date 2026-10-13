@@ -1,0 +1,17 @@
+2500 move -6000 -6000
+3500 move 320 127
+4500 click
+6000 shot cmp_menu
+7500 move -6000 -6000
+8500 move 531 397
+9500 click
+11500 move -6000 -6000
+12500 move 531 397
+13500 click
+15500 move -6000 -6000
+16500 move 531 397
+17500 click
+40000 keydown 57
+40500 keyup 57
+46000 shot cmp_fly
+47000 quit

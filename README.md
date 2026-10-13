@@ -33,6 +33,7 @@ runs on Direct3D 11.
   descenders fit
 - 2D pictures sample only inside their own rectangle: no seams or colour-key
   lines at the edges of menu pictures
+- No "mod by xdgn" splash on start and no picture waiting for Esc on exit
 - Mouse via DirectInput with the Windows pointer speed, no self-minimising,
   no crash on the game's display-mode probing (uninitialised `DEVMODE`,
   16-bit modes, oversized texture probe)
@@ -124,12 +125,22 @@ of this repository. The scripts in [tools/](tools/) build them:
 3. `tools\build_ui_pack.ps1 -GameDir <game folder> -Hd16` rebuilds the 2D
    textures, choosing per texture between the models for drawn art and
    photos (`tools\cmd\pickmodel`).
+4. `tools\brand_pack.ps1 -GameDir <game folder>` adds the Clusterball
+   Re-Enhanced and Team ClusterForce marks to the menu header, the menu bar
+   and the loading box (`tools\cmd\brand`, with the Michroma font under the
+   SIL Open Font License).
 
 Third-party programs go into `tools\bin` (not in the repository):
 [Real-ESRGAN ncnn Vulkan](https://github.com/xinntao/Real-ESRGAN/releases)
 as `tools\bin\esrgan\` (with its `models` folder) and
 [texconv](https://github.com/microsoft/DirectXTex/releases) as
 `tools\bin\texconv.exe`.
+
+## Development tools
+
+[dev/](dev/) holds what was used to get there: the OpenGL call tracer, the
+former Glide stub, small analysis programs and the renderer's test scripts.
+See [dev/README.md](dev/README.md).
 
 ## Dependencies
 

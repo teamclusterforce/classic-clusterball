@@ -1,0 +1,36 @@
+2500 move -6000 -6000
+3500 move 426 127
+4500 click
+7500 move -6000 -6000
+8500 move 637 397
+9500 click
+11500 move -6000 -6000
+12500 move 637 397
+13500 click
+15500 move -6000 -6000
+16500 move 637 397
+17500 click
+40000 keydown 57
+40500 keyup 57
+46000 set sharpen 0
+46000 set contrast 1
+46000 set saturation 1
+46000 set ao 0
+46300 shot off1
+46400 set sharpen 0.5
+46400 set contrast 1.05
+46400 set saturation 1.1
+46400 set ao 1
+46700 shot on1
+47000 move 400 0
+49000 set sharpen 0
+49000 set contrast 1
+49000 set saturation 1
+49000 set ao 0
+49300 shot off2
+49400 set sharpen 0.5
+49400 set contrast 1.05
+49400 set saturation 1.1
+49400 set ao 1
+49700 shot on2
+50500 quit

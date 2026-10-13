@@ -492,6 +492,7 @@ void inj_mouse(int click, long dx, long dy) {
     g_mq_tail = next;
 }
 BYTE g_inj_keys[256];     // DIK scan codes held down
+static DWORD g_esc_until, g_esc_last; // compat_press_escape: Esc held until this tick
 static void *g_kbd_dev;
 int g_script_mode;
 
@@ -534,8 +535,19 @@ static HRESULT WINAPI my_GetDeviceState(void *self, DWORD cb, void *data) {
     if (self == g_kbd_dev && SUCCEEDED(hr) && cb == 256) {
         BYTE *k = data;
         for (int i = 0; i < 256; i++) if (g_inj_keys[i]) k[i] = 0x80;
+        if ((LONG)(GetTickCount() - g_esc_until) < 0) k[0x01] = 0x80; // DIK_ESCAPE, see compat_press_escape
     }
     return hr;
+}
+
+// On exit the game shows the "community / www.clusterball.de - mod by xdgn" picture and waits for Esc. The renderer
+// recognises that picture and calls this instead of drawing it: Esc is reported as held for a moment.
+void compat_press_escape(void) {
+    DWORD now = GetTickCount();
+    if (now - g_esc_last < 1000) return; // once per second while the picture is still being drawn
+    g_esc_last = now;
+    g_esc_until = now + 200;
+    CLOG("exit picture: Esc pressed");
 }
 
 static HRESULT WINAPI my_GetDeviceData(void *self, DWORD cb, void *rgdod, DWORD *n, DWORD flags) {

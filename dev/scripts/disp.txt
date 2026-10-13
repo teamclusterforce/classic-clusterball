@@ -1,0 +1,3 @@
+5000 shot disp_a
+9000 shot disp_b
+13000 quit

@@ -1,0 +1,8 @@
+6000 move -6000 -6000
+6500 move 426 127
+7000 click
+9500 move -6000 -6000
+10000 move 380 30
+10500 set texlog 4000
+11500 shot stripelog
+12000 quit

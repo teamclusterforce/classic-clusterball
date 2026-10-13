@@ -24,6 +24,9 @@ type D3DSettings struct {
 	FontReplace bool    // Menü- und HUD-Schrift aus der Bahnschrift statt 8 × 8 Pixel
 	AmbientOcc  bool    // Umgebungsverdeckung
 	MouseScale  float64 // Grundfaktor der Mausbewegung
+	// Helligkeit als Gamma des Renderers in Prozent, 100 = unverändert (INI 0.50 … 1.50). Die Helligkeit des
+	// Spiels selbst (config.cfg) wirkt nur im alten Glide-Pfad.
+	Gamma int
 }
 
 // defaultD3D entspricht den Vorgaben der Schicht.
@@ -39,6 +42,7 @@ var defaultD3D = D3DSettings{
 	FontReplace: true,
 	AmbientOcc:  false,
 	MouseScale:  0.35,
+	Gamma:       100,
 }
 
 const d3dIniName = "clusterball_d3d.ini"
@@ -195,6 +199,7 @@ func readD3DSettings(cfg *AppConfig) {
 	d.FontReplace = ini.Bool("FontReplace", d.FontReplace)
 	d.AmbientOcc = ini.Bool("AmbientOcclusion", d.AmbientOcc)
 	d.MouseScale = ini.Float("MouseScale", d.MouseScale)
+	d.Gamma = clampInt(int(ini.Float("Gamma", float64(d.Gamma)/100)*100+0.5), 50, 150)
 	cfg.D3D = d
 }
 
@@ -230,6 +235,7 @@ func applyD3DSettings(ini *IniFile, d *D3DSettings) {
 	ini.Set("FontReplace", boolStr(d.FontReplace))
 	ini.Set("AmbientOcclusion", boolStr(d.AmbientOcc))
 	ini.Set("MouseScale", strconv.FormatFloat(d.MouseScale, 'f', 2, 64))
+	ini.Set("Gamma", strconv.FormatFloat(float64(d.Gamma)/100, 'f', 2, 64))
 }
 
 // normalizeResolution bringt "1920 x 1080" o.ä. auf "1920x1080"; leer und

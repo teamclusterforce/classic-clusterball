@@ -41,7 +41,10 @@ func deviation(orig, up image.Image) float64 {
 			for yy := 0; yy < k; yy++ {
 				for xx := 0; xx < k; xx++ {
 					r, g, b, a := up.At(ub.Min.X+x*k+xx, ub.Min.Y+y*k+yy).RGBA()
-					s[0] += float64(r); s[1] += float64(g); s[2] += float64(b); s[3] += float64(a)
+					s[0] += float64(r)
+					s[1] += float64(g)
+					s[2] += float64(b)
+					s[3] += float64(a)
 				}
 			}
 			r, g, b, a := orig.At(ob.Min.X+x, ob.Min.Y+y).RGBA()

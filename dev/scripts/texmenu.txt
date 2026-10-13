@@ -1,0 +1,5 @@
+5000 set texreplace 0
+5500 shot morig
+5600 set texreplace 1
+6100 shot mhd
+6300 quit

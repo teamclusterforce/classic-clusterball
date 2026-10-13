@@ -1,0 +1,11 @@
+2500 move -6000 -6000
+3500 move 426 127
+4500 click
+7000 shot w0
+7500 move -6000 -6000
+8500 move 502 150
+9500 click
+11000 shot w1
+11500 click
+13000 shot w2
+13500 quit

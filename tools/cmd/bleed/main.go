@@ -48,7 +48,10 @@ func main() {
 								continue
 							}
 							j := (yy*w + xx) * 4
-							r += int(img.Pix[j]); g += int(img.Pix[j+1]); bl += int(img.Pix[j+2]); n++
+							r += int(img.Pix[j])
+							g += int(img.Pix[j+1])
+							bl += int(img.Pix[j+2])
+							n++
 						}
 					}
 					if n > 0 {

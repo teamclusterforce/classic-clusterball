@@ -1,0 +1,25 @@
+6000 move -6000 -6000
+6400 move 426 159
+7200 click
+8700 move -6000 -6000
+9100 move 426 159
+9900 click
+11900 shot g_host
+12400 move -6000 -6000
+12800 move 637 397
+13600 click
+15900 shot g_0
+16400 move -6000 -6000
+16800 move 637 397
+17600 click
+19900 shot g_1
+20400 move -6000 -6000
+20800 move 637 397
+21600 click
+23900 shot g_2
+26900 shot g_3
+29900 shot g_4
+32900 shot g_5
+35900 shot g_6
+38900 shot g_7
+39400 quit

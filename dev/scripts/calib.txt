@@ -1,0 +1,7 @@
+2500 move -6000 -6000
+5000 shot corner
+5200 move 200 0
+6500 shot x200
+6700 move 0 200
+8000 shot x200y200
+8200 quit

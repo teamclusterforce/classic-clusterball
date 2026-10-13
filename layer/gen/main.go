@@ -1,3 +1,7 @@
+// gen writes pass.c: pass-through stubs for every export of the system's opengl32.dll that the renderer does
+// not implement itself (GLU32.dll binds to the module by name and needs all of them).
+//
+//	go run ./gen C:\Windows\SysWOW64\opengl32.dll gld3d.c > pass.c
 package main
 
 import (

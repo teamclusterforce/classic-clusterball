@@ -1,0 +1,16 @@
+200 shot v_boot
+900 shot v_main
+6000 move -6000 -6000
+6500 move 426 127
+7000 click
+9500 move -6000 -6000
+10000 move 380 30
+11000 shot v_train
+11500 move -6000 -6000
+12500 move 637 397
+13500 click
+14500 move -6000 -6000
+15500 move 637 397
+16500 click
+18000 shot v_load
+18500 quit

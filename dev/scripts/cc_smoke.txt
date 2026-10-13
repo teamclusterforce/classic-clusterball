@@ -1,0 +1,7 @@
+4000 move -6000 -6000
+5000 shot cc_main
+6000 move 426 127
+6500 click
+9000 move -6000 -6000
+9500 shot cc_training
+10000 quit

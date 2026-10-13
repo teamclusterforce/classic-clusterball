@@ -1,0 +1,47 @@
+6000 move -6000 -6000
+6400 move 426 159
+7200 click
+8700 move -6000 -6000
+9100 move 426 159
+9900 click
+11400 move -6000 -6000
+11800 move 637 397
+12600 click
+15100 move -6000 -6000
+15500 move 261 82
+16300 click
+17800 shot w_spieler
+17800 move -6000 -6000
+18200 move 351 82
+19000 click
+20500 shot w_punkte
+20500 move -6000 -6000
+20900 move 171 82
+21700 click
+23200 move -6000 -6000
+23600 move 706 233
+24400 click
+25900 move -6000 -6000
+26300 move 706 233
+27100 click
+36600 shot w_start
+36600 keydown 57
+36900 keyup 57
+42900 shot w_fly
+42900 keydown 1
+43200 keyup 1
+44700 shot w_esc
+45200 keydown 1
+45500 keyup 1
+47000 shot w_esc2
+55000 shot w_0
+63000 shot w_1
+71000 shot w_2
+79000 shot w_3
+87000 shot w_4
+95000 shot w_5
+103000 shot w_6
+111000 shot w_7
+119000 shot w_8
+127000 shot w_9
+127500 quit

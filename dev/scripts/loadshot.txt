@@ -1,0 +1,22 @@
+1500 shot boot1
+3000 shot boot2
+4500 shot boot3
+6000 move -6000 -6000
+6500 move 426 127
+7000 click
+9500 move -6000 -6000
+10000 move 380 30
+11000 shot menu_pm
+11500 move -6000 -6000
+12500 move 637 397
+13500 click
+14500 move -6000 -6000
+15500 move 637 397
+16500 click
+17500 move -6000 -6000
+18500 move 637 397
+19500 click
+21000 shot load1
+25000 shot load2
+30000 shot load3
+31000 quit

@@ -756,7 +756,9 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 									Label{AssignTo: &mw.t.setQuality, Text: tr("set.quality"), Font: fontBody},
 									combo(&mw.cmbQuality, qualityLabels(), ""),
 									Label{AssignTo: &mw.t.setBrightness, Text: tr("set.brightness"), Font: fontBody},
-									slider(&mw.sldBrightness, &mw.lblBrightness, 0, 100),
+									// Gamma des Renderers in Prozent: die Helligkeit des Spiels
+									// selbst wirkt unter Direct3D nicht, siehe D3DSettings.Gamma.
+									slider(&mw.sldBrightness, &mw.lblBrightness, 50, 150),
 									Label{AssignTo: &mw.t.setMouse, Text: tr("set.mouse"), Font: fontBody,
 										ToolTipText: tr("set.mouseTip")},
 									slider(&mw.sldMouse, &mw.lblMouse, 5, 100),
@@ -1029,7 +1031,7 @@ func (mw *AppWindow) applyConfig() {
 	// Spiel
 	if mw.cmbQuality != nil {
 		mw.cmbQuality.SetCurrentIndex(indexOfInt(qualityValues, mw.cfg.GraphicalQuality))
-		mw.sldBrightness.SetValue(clampInt(mw.cfg.Brightness, 0, 100))
+		mw.sldBrightness.SetValue(clampInt(mw.cfg.D3D.Gamma, 50, 150))
 		mw.lblBrightness.SetText(fmt.Sprintf("%d", mw.sldBrightness.Value()))
 	}
 }
@@ -1112,7 +1114,7 @@ func (mw *AppWindow) readSettings() {
 		if i := mw.cmbQuality.CurrentIndex(); i >= 0 && i < len(qualityValues) {
 			mw.cfg.GraphicalQuality = qualityValues[i]
 		}
-		mw.cfg.Brightness = mw.sldBrightness.Value()
+		mw.cfg.D3D.Gamma = mw.sldBrightness.Value()
 	}
 
 	mw.cfg.ServerMode = "arena"
