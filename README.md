@@ -46,9 +46,16 @@ size.
 
 ## Getting started
 
-Put `ClusterballCC.exe` into your Clusterball folder, next to
-`Clusterball.exe`, and start it. It sets everything else up when you start the
-game; the details are under [Installation](#installation).
+**Use the installer.** Download `Clusterball Re-Enhanced.msi` from the
+[latest release](https://github.com/teamclusterforce/classic-clusterball/releases/latest)
+and run it. It brings everything ready to play, including the high-resolution
+texture packs.
+
+This repository holds only the source code. The texture packs are made from
+the game's own files and are not part of it; without the installer you would
+have to build them yourself with the tools in [assets/](assets/) (see
+[Texture packs](#texture-packs)), which takes hours and needs extra programs.
+Only the launcher on its own is described under [Installation](#installation).
 
 ---
 
@@ -176,8 +183,14 @@ replaces the old `XDreamCC.ini`. Screenshots are at the
 
 ### Installation
 
-Copy `ClusterballCC.exe` into the game folder, next to `Clusterball.exe`, and
-start it. There is nothing to point it to: it always uses the
+The easiest way is the installer from the
+[releases](https://github.com/teamclusterforce/classic-clusterball/releases)
+(see [Getting started](#getting-started)). To add only the launcher to an
+existing Clusterball folder instead, copy `ClusterballCC.exe` into the game
+folder, next to `Clusterball.exe`, and start it; without texture packs the
+game then shows its original textures.
+
+There is nothing to point the launcher to: it always uses the
 `Clusterball.exe` next to itself. Its own configuration is stored there as
 well (`clusterball.ini`; an `xdreamcc.cfg` of earlier versions is taken over
 and removed on the first save). It also puts a short readme, the license and
@@ -226,7 +239,9 @@ by `modern-renderer\gen` from the system's `opengl32.dll`.
 ## Texture packs
 
 The packs are made from the game's own textures and are therefore not part
-of this repository. The scripts in [assets/](assets/) build them:
+of this repository; the installer (see [Getting started](#getting-started))
+brings them ready-made. To build them yourself, the scripts in
+[assets/](assets/) do it:
 
 1. `assets\dump_all_menus.ps1 -GameDir <game folder>` plays through every
    menu, a LAN match and a training with `TextureDump=1`; repeat with
