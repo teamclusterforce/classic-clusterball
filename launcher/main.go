@@ -77,6 +77,12 @@ const siteURL = "http://www.clusterball.de"
 // mit 16 Bit bricht es beim Start ab. Deshalb steht der Wert fest.
 const gameDepth = 32
 
+// Detailstufe des Spiels (graphicalQuality in dessen config.cfg). Das Spiel
+// kennt fuenf Stufen, 0 = sehr niedrig bis 4 = sehr hoch (Local.mrg, Texte
+// 147-151); 3 ist "Hoch". Sie steht fest und wird bei jedem Start gesetzt -
+// frueher schrieb der Launcher 2, im Spiel "Mittel".
+const gameQuality = 3
+
 // Abstaende. Ein einziger Gutter fuer alle Aussenraender, damit nichts
 // mehr an der Fensterkante klebt.
 const (
@@ -100,7 +106,6 @@ var (
 // Auswahllisten, deren Beschriftung uebersetzt wird, waehrend der gespeicherte
 // Wert gleich bleibt. Die Werte sind die der clusterball_d3d.ini.
 var (
-	qualityValues = []int{0, 1, 2}
 	displayValues = []bool{true, false} // Vollbild, Fenster
 	resValues     = []string{"", "1280x720", "1600x900", "1920x1080", "2560x1440", "3840x2160"}
 	msaaValues    = []int{1, 2, 4, 8}
@@ -109,7 +114,6 @@ var (
 	packValues    = []string{"", "hd"}
 )
 
-func qualityLabels() []string { return []string{tr("set.qLow"), tr("set.qMid"), tr("set.qHigh")} }
 func displayLabels() []string { return []string{tr("set.fullscreen"), tr("set.window")} }
 func msaaLabels() []string    { return []string{tr("set.off"), "2×", "4×", "8×"} }
 func ssLabels() []string      { return []string{tr("set.off"), "2×"} }
@@ -193,11 +197,9 @@ type texts struct {
 	setSharpen    *walk.Label
 	d3dHint       *walk.Label
 	setGame       *walk.Label
-	setQuality    *walk.Label
 	setBrightness *walk.Label
 	setMouse      *walk.Label
 	setNetwork    *walk.Label
-	setMaster     *walk.Label
 	gfxHint       *walk.Label
 	btnSave       *walk.PushButton
 
@@ -244,7 +246,6 @@ type AppWindow struct {
 	chkExternalIP *walk.CheckBox
 
 	// Einstellungen
-	editServerIP *walk.LineEdit
 
 	// Direct3D-Schicht
 	cmbDisplay *walk.ComboBox
@@ -261,7 +262,6 @@ type AppWindow struct {
 	chkAO      *walk.CheckBox
 
 	// Spiel
-	cmbQuality    *walk.ComboBox
 	sldBrightness *walk.Slider
 	lblBrightness *walk.Label
 	sldMouse      *walk.Slider
@@ -383,15 +383,15 @@ func (mw *AppWindow) build() error {
 	err := MainWindow{
 		AssignTo: &mw.MainWindow,
 		Title:    appTitle,
-		MinSize:  Size{Width: 760, Height: 620},
-		Size:     Size{Width: 790, Height: 640},
+		MinSize:  Size{Width: 820, Height: 620},
+		Size:     Size{Width: 980, Height: 640}, // quer, nicht fast quadratisch
 		// VNear: falls doch einmal Platz uebrig bleibt, sammelt er sich unten
 		// statt sich als Rand um jedes Element zu legen.
 		Layout: VBox{MarginsZero: true, SpacingZero: true, Alignment: AlignHNearVNear},
 		// Summe der Breiten muss unter die Fensterbreite passen, sonst wird
 		// das letzte Feld abgeschnitten.
 		StatusBarItems: []StatusBarItem{
-			{AssignTo: &mw.lblStatus, Text: tr("st.ready"), Width: 520},
+			{AssignTo: &mw.lblStatus, Text: tr("st.ready"), Width: 580},
 			{Text: "v" + appVersion, Width: 70},
 			{AssignTo: &mw.t.sbBrand, Text: tr("sb.brand"), Width: 150,
 				ToolTipText: siteURL,
@@ -442,6 +442,15 @@ func (mw *AppWindow) build() error {
 	}
 	mw.langToggle.SetCursor(walk.CursorHand())
 	mw.help.attach()
+
+	// Die Statusleiste zeichnet beim Breiterziehen nur den neuen Streifen; der
+	// Bereich rechts vom letzten Feld behielt so jeden alten Groessengriff
+	// (eine Spur aus Punkten). Bei jeder Groessenaenderung ganz neu zeichnen.
+	mw.MainWindow.SizeChanged().Attach(func() {
+		if sb := mw.MainWindow.StatusBar(); sb != nil {
+			sb.Invalidate()
+		}
+	})
 
 	// Hintergrund-Goroutinen sauber beenden statt auf ein zerstoertes
 	// Fenster-Handle zu pollen. sync.Once, weil Closing bei einem
@@ -853,14 +862,12 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 					Composite{
 						Layout: VBox{MarginsZero: true, Spacing: gapS, Alignment: AlignHNearVNear},
 						Children: []Widget{
-							// Detailstufe und Helligkeit stehen in der config.cfg
-							// des Spiels, die Maus in der clusterball_d3d.ini.
+							// Helligkeit und Maus stehen in der clusterball_d3d.ini.
+							// Die Detailstufe des Spiels steht fest, siehe gameQuality.
 							Label{AssignTo: &mw.t.setGame, Text: tr("set.game"), Font: fontHeading},
 							Composite{
 								Layout: Grid{Columns: 2, MarginsZero: true, Spacing: gapS},
 								Children: []Widget{
-									Label{AssignTo: &mw.t.setQuality, Text: tr("set.quality"), Font: fontBody},
-									combo(&mw.cmbQuality, qualityLabels(), ""),
 									Label{AssignTo: &mw.t.setBrightness, Text: tr("set.brightness"), Font: fontBody},
 									// Gamma des Renderers in Prozent: die Helligkeit des Spiels
 									// selbst wirkt unter Direct3D nicht, siehe D3DSettings.Gamma.
@@ -877,9 +884,8 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 							Composite{
 								Layout: Grid{Columns: 2, MarginsZero: true, Spacing: gapS},
 								Children: []Widget{
-									Label{AssignTo: &mw.t.setMaster, Text: tr("set.master"), Font: fontBody},
-									LineEdit{AssignTo: &mw.editServerIP, Text: mw.cfg.ServerIP, Font: fontBody,
-										MinSize: Size{Width: 150}, MaxSize: Size{Width: 150}},
+									// Die Adresse des Master-Servers steht nur in der
+									// clusterball.ini (server_ip), nicht in der Oberflaeche.
 									// Eigene IP fuer den Dedicated Host. Ein Feld fuer die
 									// Host-IP gibt es nicht: der Master-Server liest die
 									// Adresse aus dem Absender des UDP-Heartbeats.
@@ -1086,7 +1092,6 @@ func (mw *AppWindow) retranslate() {
 	mw.t.d3dHint.SetText(tr("set.d3dHint"))
 
 	mw.t.setGame.SetText(tr("set.game"))
-	mw.t.setQuality.SetText(tr("set.quality"))
 	mw.t.setBrightness.SetText(tr("set.brightness"))
 	mw.t.setMouse.SetText(tr("set.mouse"))
 	mw.t.setMouse.SetToolTipText(tr("set.mouseTip"))
@@ -1105,10 +1110,8 @@ func (mw *AppWindow) retranslate() {
 	refill(mw.cmbSS, ssLabels())
 	refill(mw.cmbAniso, anisoLabels())
 	refill(mw.cmbTexPack, packLabels())
-	refill(mw.cmbQuality, qualityLabels())
 
 	mw.t.setNetwork.SetText(tr("set.network"))
-	mw.t.setMaster.SetText(tr("set.master"))
 	mw.t.btnSave.SetText(tr("set.save"))
 	mw.t.btnSave.SetToolTipText(fmt.Sprintf(tr("set.saveTip"), configPath()))
 
@@ -1136,7 +1139,7 @@ func (mw *AppWindow) updateServerLabel() {
 	case mw.lastHosts < 0:
 		mw.lblServers.SetText(tr("srv.title"))
 	case mw.lastHosts == 0:
-		mw.lblServers.SetText(tr("srv.titleNone"))
+		mw.lblServers.SetText(tr("srv.title")) // "keine" sagt schon der Hinweis in der Liste
 	default:
 		mw.lblServers.SetText(fmt.Sprintf(tr("srv.titleN"), mw.lastHosts))
 	}
@@ -1178,7 +1181,6 @@ func (mw *AppWindow) showTab(tab int) {
 // ── Konfiguration ↔ Oberflaeche ───────────────────────────────────────────────
 
 func (mw *AppWindow) applyConfig() {
-	setText(mw.editServerIP, mw.cfg.ServerIP)
 	setText(mw.editOwnIP, mw.cfg.OwnIP)
 	setText(mw.editAccount, mw.cfg.AccountName)
 	setText(mw.editAccPassword, mw.cfg.AccountPassword)
@@ -1192,8 +1194,7 @@ func (mw *AppWindow) applyConfig() {
 	}
 
 	// Spiel
-	if mw.cmbQuality != nil {
-		mw.cmbQuality.SetCurrentIndex(indexOfInt(qualityValues, mw.cfg.GraphicalQuality))
+	if mw.sldBrightness != nil {
 		mw.sldBrightness.SetValue(clampInt(mw.cfg.D3D.Gamma, 50, 150))
 		mw.lblBrightness.SetText(fmt.Sprintf("%d", mw.sldBrightness.Value()))
 	}
@@ -1262,7 +1263,6 @@ func (mw *AppWindow) syncSpiel() {
 // Einstellungen-Tab etwas aendert und sofort startet, bekommt genau das, auch
 // ohne vorher zu speichern.
 func (mw *AppWindow) readSettings() {
-	mw.cfg.ServerIP = text(mw.editServerIP)
 
 	// Direct3D-Schicht
 	if mw.cmbDisplay != nil {
@@ -1296,12 +1296,10 @@ func (mw *AppWindow) readSettings() {
 		d.MouseScale = float64(mw.sldMouse.Value()) / 100
 	}
 
-	// Spiel. Die Farbtiefe steht fest und wird nicht abgefragt.
+	// Spiel. Farbtiefe und Detailstufe stehen fest und werden nicht abgefragt.
 	mw.cfg.Depth = gameDepth
-	if mw.cmbQuality != nil {
-		if i := mw.cmbQuality.CurrentIndex(); i >= 0 && i < len(qualityValues) {
-			mw.cfg.GraphicalQuality = qualityValues[i]
-		}
+	mw.cfg.GraphicalQuality = gameQuality
+	if mw.sldBrightness != nil {
 		mw.cfg.D3D.Gamma = mw.sldBrightness.Value()
 	}
 

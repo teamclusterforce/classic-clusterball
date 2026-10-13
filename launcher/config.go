@@ -36,7 +36,7 @@ type AppConfig struct {
 
 	// Grafik des Spiels – Quelle ist die config.cfg neben der Clusterball.exe
 	Depth            int // Farbtiefe, fest auf gameDepth
-	GraphicalQuality int // 0 = niedrig … 2 = hoch
+	GraphicalQuality int // graphicalQuality des Spiels, steht fest auf gameQuality
 	Brightness       int // 0 … 100
 	Antialias        bool
 	TrilinearMipmap  bool
@@ -64,7 +64,7 @@ var defaultConfig = AppConfig{
 	// Empfohlene Bildqualität: alles an, was die Darstellung verbessert.
 	// Die Farbtiefe steht fest, siehe gameDepth.
 	Depth:            gameDepth,
-	GraphicalQuality: 2, // hoch
+	GraphicalQuality: gameQuality,
 	Brightness:       90,
 	Antialias:        true,
 	TrilinearMipmap:  true,
@@ -165,6 +165,7 @@ func LoadConfig() AppConfig {
 	// Immer die einzige Farbtiefe, mit der das Spiel unter der Direct3D-Schicht
 	// startet - unabhaengig davon, was in einer aelteren Konfiguration steht.
 	cfg.Depth = gameDepth
+	cfg.GraphicalQuality = gameQuality
 	return cfg
 }
 

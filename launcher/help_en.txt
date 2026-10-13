@@ -99,7 +99,7 @@ QUICK CHAT MESSAGE (1–10) :: Ready-made texts on F1–F10, because typing in t
 AUDIO :: 3D or 2D sound, or OFF.
 VOLUME / MUSIC :: Volume, and music on or off.
 MESSAGES :: ON: the onboard computer announces incoming messages from other players.
-GRAPHICS QUALITY :: The level of detail. You can also set it in the launcher under Settings.
+GRAPHICS QUALITY :: The level of detail. The launcher sets it to High on every start.
 EDU VISIBLE :: NO hides the weapon unit.
 GRAPHICS MODE / RESOLUTION :: Fixed in the Re-Enhanced package: Direct3D 11. Set resolution, fullscreen and anti-aliasing in the launcher under Settings.
 NETWORK SPEED :: Your connection, so data transfer suits internet games.

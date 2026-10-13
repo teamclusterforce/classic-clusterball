@@ -68,8 +68,8 @@ func TestMigrationSetztBildqualitaet(t *testing.T) {
 	}
 	migrateConfig(&cfg)
 
-	if cfg.GraphicalQuality != 2 {
-		t.Errorf("GraphicalQuality = %d, erwartet 2 (hoch)", cfg.GraphicalQuality)
+	if cfg.GraphicalQuality != gameQuality {
+		t.Errorf("GraphicalQuality = %d, erwartet %d (hoch)", cfg.GraphicalQuality, gameQuality)
 	}
 	if cfg.Brightness != 90 {
 		t.Errorf("Brightness = %d, erwartet 90", cfg.Brightness)
@@ -90,7 +90,7 @@ func TestVorgaben(t *testing.T) {
 		!defaultConfig.Force32BitTex || !defaultConfig.ClampTexture {
 		t.Errorf("Qualitätsschalter nicht vorbelegt: %+v", defaultConfig)
 	}
-	if defaultConfig.GraphicalQuality != 2 || defaultConfig.Brightness != 90 {
+	if defaultConfig.GraphicalQuality != gameQuality || defaultConfig.Brightness != 90 {
 		t.Errorf("Detailstufe/Helligkeit falsch: %d / %d",
 			defaultConfig.GraphicalQuality, defaultConfig.Brightness)
 	}
@@ -121,7 +121,6 @@ func TestAuswahllistenVollstaendig(t *testing.T) {
 		{"Supersampling", len(ssValues), len(ssLabels())},
 		{"Filterung", len(anisoValues), len(anisoLabels())},
 		{"Texturen", len(packValues), len(packLabels())},
-		{"Detailstufe", len(qualityValues), len(qualityLabels())},
 	}
 	for _, p := range pairs {
 		if p.values != p.labels {

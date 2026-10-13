@@ -98,7 +98,7 @@ SCHNELLE CHAT NACHRICHT (1–10) :: Vorgefertigte Texte auf F1–F10, weil es si
 AUDIO :: 3D- oder 2D-Sound, oder AUS.
 LAUTSTÄRKE / MUSIK :: Lautstärke und Musik an oder aus.
 NACHRICHTEN :: AN: der Bordcomputer meldet akustisch, wenn Nachrichten anderer Spieler eintreffen.
-GRAFIKQUALITÄT :: Die Detailstufe. Du stellst sie auch im Launcher unter Einstellungen ein.
+GRAFIKQUALITÄT :: Die Detailstufe. Der Launcher stellt sie bei jedem Start auf Hoch.
 EDU SICHTBAR :: NEIN blendet die Waffeneinheit aus.
 GRAFIKMODUS / AUFLÖSUNG :: Im Re-Enhanced-Paket fest: Direct3D 11. Auflösung, Vollbild und Kantenglättung stellst du im Launcher unter Einstellungen ein.
 NETZWERK GESCHW. :: Deine Verbindung, damit die Datenübertragung bei Internetspielen passt.

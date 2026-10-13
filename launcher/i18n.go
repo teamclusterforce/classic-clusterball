@@ -71,7 +71,6 @@ var textsDE = map[string]string{
 
 	"srv.title":        "ONLINE SERVER",
 	"srv.titleN":       "ONLINE SERVER  (%d)",
-	"srv.titleNone":    "ONLINE SERVER  (keine)",
 	"srv.refresh":      "↺ Aktualisieren",
 	"srv.colName":      "Server-Name",
 	"srv.colPlayers":   "Spieler",
@@ -88,7 +87,6 @@ var textsDE = map[string]string{
 
 	"set.graphics": "Grafik (Direct3D 11)",
 	"set.network":  "Netzwerk",
-	"set.master":   "Master-Server IP:",
 	"set.language": "Sprache",
 	"set.save":     "Einstellungen speichern",
 	"set.defaults": "Standard wiederherstellen",
@@ -123,10 +121,6 @@ var textsDE = map[string]string{
 	"set.d3dHint":       "Alt+Enter wechselt im Spiel zwischen Vollbild und Fenster",
 
 	"set.game":       "Spiel",
-	"set.quality":    "Detailstufe:",
-	"set.qLow":       "niedrig",
-	"set.qMid":       "mittel",
-	"set.qHigh":      "hoch",
 	"set.brightness": "Helligkeit:",
 	"set.mouse":      "Maus:",
 	"set.mouseTip":   "Empfindlichkeit der Maus im Spiel; die Zeigergeschwindigkeit von Windows kommt hinzu.",
@@ -184,7 +178,6 @@ var textsEN = map[string]string{
 
 	"srv.title":        "ONLINE SERVERS",
 	"srv.titleN":       "ONLINE SERVERS  (%d)",
-	"srv.titleNone":    "ONLINE SERVERS  (none)",
 	"srv.refresh":      "↺ Refresh",
 	"srv.colName":      "Server name",
 	"srv.colPlayers":   "Players",
@@ -201,7 +194,6 @@ var textsEN = map[string]string{
 
 	"set.graphics": "Graphics (Direct3D 11)",
 	"set.network":  "Network",
-	"set.master":   "Master server IP:",
 	"set.language": "Language",
 	"set.save":     "Save settings",
 	"set.defaults": "Restore defaults",
@@ -236,10 +228,6 @@ var textsEN = map[string]string{
 	"set.d3dHint":       "Alt+Enter switches between fullscreen and window in the game",
 
 	"set.game":       "Game",
-	"set.quality":    "Detail level:",
-	"set.qLow":       "low",
-	"set.qMid":       "medium",
-	"set.qHigh":      "high",
 	"set.brightness": "Brightness:",
 	"set.mouse":      "Mouse:",
 	"set.mouseTip":   "Mouse sensitivity in the game; the Windows pointer speed is applied on top.",
