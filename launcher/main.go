@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
+	"image"
 	"image/png"
 	"io"
 	"math"
@@ -21,6 +22,8 @@ import (
 
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
+	"github.com/lxn/win"
+	xdraw "golang.org/x/image/draw"
 )
 
 //go:embed logo_cb.png
@@ -299,21 +302,40 @@ func runGUI(cfg *AppConfig) {
 // als Rand um *alle* Elemente (boxlayout.go:456). Genau das hat den Inhalt
 // beim Tab-Wechsel springen lassen. Mit Ideal-Modus ist der Header nicht mehr
 // dehnbar und der freie Platz landet vollstaendig im Inhaltsbereich.
+//
+// Das PNG ist rund fuenfmal so gross wie die Anzeige. Diese Verkleinerung
+// uebernimmt nicht Windows beim Zeichnen (ohne Glaettung, das Logo wurde
+// pixelig), sondern loadLogo vorab mit einem Catmull-Rom-Filter, genau auf
+// die Pixelgroesse fuer die DPI des Bildschirms.
 func loadLogo() *walk.Bitmap {
 	img, err := png.Decode(bytes.NewReader(logoPNG))
 	if err != nil {
 		return nil
 	}
-	w := img.Bounds().Dx()
-	if w <= 0 {
+	b := img.Bounds()
+	if b.Dx() <= 0 {
 		return nil
 	}
-	dpi := int(math.Round(float64(w) * 96.0 / float64(logoWidth)))
-	bmp, err := walk.NewBitmapFromImageForDPI(img, dpi)
+	dpi := screenDPI()
+	tw := int(math.Round(float64(logoWidth) * float64(dpi) / 96))
+	th := int(math.Round(float64(tw) * float64(b.Dy()) / float64(b.Dx())))
+	small := image.NewRGBA(image.Rect(0, 0, tw, th))
+	xdraw.CatmullRom.Scale(small, small.Bounds(), img, b, xdraw.Src, nil)
+	bmp, err := walk.NewBitmapFromImageForDPI(small, dpi)
 	if err != nil {
 		return nil
 	}
 	return bmp
+}
+
+// screenDPI ist die DPI des Bildschirms (96 = 100 %).
+func screenDPI() int {
+	hdc := win.GetDC(0)
+	defer win.ReleaseDC(0, hdc)
+	if d := int(win.GetDeviceCaps(hdc, win.LOGPIXELSX)); d > 0 {
+		return d
+	}
+	return 96
 }
 
 func (mw *AppWindow) build() error {
