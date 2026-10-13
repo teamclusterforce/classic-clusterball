@@ -335,6 +335,9 @@ func runGUI(cfg *AppConfig) {
 	if f, err := os.OpenFile(crashPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644); err == nil {
 		debug.SetCrashOutput(f, debug.CrashOptions{})
 		defer func() {
+			// Der Runtime gehoert eine eigene Kopie des Handles; solange sie offen
+			// ist, laesst Windows die Datei nicht loeschen.
+			debug.SetCrashOutput(nil, debug.CrashOptions{})
 			f.Close()
 			if st, err := os.Stat(crashPath); err == nil && st.Size() == 0 {
 				os.Remove(crashPath)
