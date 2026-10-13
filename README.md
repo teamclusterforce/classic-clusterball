@@ -1,4 +1,4 @@
-# Clusterball Re-Enhanced
+<p align="center"><img src="docs/logo-banner.png" alt="Clusterball Re-Enhanced" width="800"></p>
 
 Clusterball (Daydream Software, 2000) is a fast sport in the air: you fly a
 glider through a landscape, collect coloured balls into a chain behind you and
@@ -30,7 +30,7 @@ successor to Clusterball.
 
 | Play | Settings |
 | ---- | -------- |
-| ![Launcher: server list and game start](docs/launcher-play.png) | ![Launcher: graphics settings](docs/launcher-settings.png) |
+| ![Launcher: server list and game start](docs/launcher-play-en.png) | ![Launcher: graphics settings](docs/launcher-settings-en.png) |
 
 ### The game
 
