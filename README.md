@@ -188,6 +188,12 @@ of this repository. The scripts in [assets/](assets/) build them:
    labels sharp (`assets\cmd\brand`, with the Michroma font under the
    SIL Open Font License).
 
+`assets\build_scaled_pack.ps1 -GameDir <game folder> -List <hashes.txt>
+-Factor 8 -Cap 2048 -Name hd8` builds a pack for a list of textures at another
+size, resampled from the 4x and 16x upscales (`assets\cmd\scalepack`). It is
+not used by the game; ClusterForce takes it for the textures of the ported
+Clusterball levels.
+
 Third-party programs go into `assets\bin` (not in the repository):
 [Real-ESRGAN ncnn Vulkan](https://github.com/xinntao/Real-ESRGAN/releases)
 as `assets\bin\esrgan\` (with its `models` folder) and
