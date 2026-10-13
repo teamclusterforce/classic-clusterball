@@ -12,7 +12,7 @@ size. The call log showed which OpenGL subset the renderer in
 `modern-renderer/` has to implement. It shares `compat.c` with the renderer:
 
     cd tools\gltrace
-    zig cc -target x86-windows-gnu -shared -O2 -o opengl32.dll trace.c scale.c pass.c ..\..\modern-renderer\compat.c -lgdi32 -luser32
+    zig cc -target x86-windows-gnu -shared -O2 -o opengl32.dll trace.c scale.c pass.c ..\..\modern-renderer\compat.c ..\..\modern-renderer\appicon.c -lgdi32 -luser32
 
 Settings: `CB_GLTRACE=1` writes `gltrace.log`, `CB_SHOTS=3,6,10` writes
 framebuffer captures to `shots\`.

@@ -363,6 +363,12 @@ func (mw *AppWindow) build() error {
 	if err != nil {
 		return err
 	}
+	// Programm-Icon fuer Titelleiste und Taskleiste. walk sucht die Icon-Gruppe
+	// unter der ID 7 (aeltere rsrc-Versionen); rsrc v0.10 vergibt nach dem
+	// Manifest (1) die ID 2.
+	if ic, err := walk.NewIconFromResourceId(2); err == nil {
+		mw.MainWindow.SetIcon(ic)
+	}
 
 	// Hintergrund-Goroutinen sauber beenden statt auf ein zerstoertes
 	// Fenster-Handle zu pollen. sync.Once, weil Closing bei einem

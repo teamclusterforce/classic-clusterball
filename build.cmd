@@ -17,7 +17,7 @@ if errorlevel 1 (
 ) else (
     if not exist "%ROOT%modern-renderer\_build" mkdir "%ROOT%modern-renderer\_build"
     cd /d "%ROOT%modern-renderer"
-    zig cc -target x86-windows-gnu -shared -O2 -o _build\opengl32.dll gld3d.c pass.c compat.c -ld3d11 -ldxgi -ldxguid -lgdi32 -luser32
+    zig cc -target x86-windows-gnu -shared -O2 -o _build\opengl32.dll gld3d.c pass.c compat.c appicon.c -ld3d11 -ldxgi -ldxguid -lgdi32 -luser32
     if errorlevel 1 (
         echo Renderer build failed.
         exit /b 1

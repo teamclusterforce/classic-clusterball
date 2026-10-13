@@ -175,6 +175,24 @@ static LONG WINAPI my_ChangeDisplaySettingsA(DEVMODEA *dm, DWORD flags) {
     return DISP_CHANGE_SUCCESSFUL;
 }
 
+// The Clusterball Re-Enhanced icon (appicon.c, from assets/cmd/icon) for the game window's title bar, taskbar button
+// and Alt+Tab, instead of the one in Clusterball.exe; the exe itself stays untouched.
+extern const struct { int size; const unsigned char *png; size_t len; } g_app_icons[];
+extern const int g_app_icon_count;
+static HICON app_icon(int size) {
+    int k = 0; // the smallest image at least this large (the list runs largest first)
+    for (int i = 0; i < g_app_icon_count; i++)
+        if (g_app_icons[i].size >= size) k = i;
+    return CreateIconFromResourceEx((PBYTE)g_app_icons[k].png, (DWORD)g_app_icons[k].len, TRUE, 0x00030000, size, size,
+                                    LR_DEFAULTCOLOR);
+}
+static void set_app_icon(HWND w) {
+    HICON big = app_icon(GetSystemMetrics(SM_CXICON)), small = app_icon(GetSystemMetrics(SM_CXSMICON));
+    if (big) SendMessageA(w, WM_SETICON, ICON_BIG, (LPARAM)big);
+    if (small) SendMessageA(w, WM_SETICON, ICON_SMALL, (LPARAM)small);
+    CLOG("window icon %s", big && small ? "set" : "FAILED");
+}
+
 static HWND WINAPI my_CreateWindowExA(DWORD ex, LPCSTR cls, LPCSTR title, DWORD st, int x, int y, int w, int h,
                                       HWND parent, HMENU menu, HINSTANCE inst, LPVOID param) {
     int top = !parent && (st & WS_POPUP);
@@ -190,6 +208,7 @@ static HWND WINAPI my_CreateWindowExA(DWORD ex, LPCSTR cls, LPCSTR title, DWORD 
         // config.cfg has been read by now: horiz/vert_game_res drive the OpenGL mode switch at 0x4093ad.
         if (g_game_w) { *(WORD *)0xb11e3a = (WORD)g_game_w; *(WORD *)0xb11e3c = (WORD)g_game_h; }
         g_orig_proc = (WNDPROC)SetWindowLongA(r, GWL_WNDPROC, (LONG)sub_proc);
+        set_app_icon(r);
         fit_window(r, g_mode_w ? g_mode_w : 640, g_mode_h ? g_mode_h : 480);
     }
     return r;
