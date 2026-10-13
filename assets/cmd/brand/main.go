@@ -36,6 +36,9 @@ var cfLogoPNG []byte
 var (
 	red   = color.NRGBA{200, 16, 30, 255} // the red of the Clusterball slogan
 	black = color.NRGBA{0, 0, 0, 255}     // like the Clusterball emblem on the yellow bar
+	// The loading progress bar, measured on screen as de0000 after the renderer's default grading (contrast 1.05,
+	// saturation 1.1) and taken back through it.
+	barRed = color.NRGBA{202, 0, 0, 255}
 )
 
 // canvas is an upscaled texture; k converts the original's pixels to the canvas's. flipped: the game stores
@@ -66,9 +69,12 @@ var marks = []mark{
 		w := c.emblem(black, 14, 9, 30)
 		c.text("TEAM CLUSTERFORCE", black, 7, 14+w+8, 250, 28)
 	}},
-	// Loading box (358 x 130, stored bottom-up): Clusterball word mark at x 110-248, y 65-80 from the top.
+	// Loading box (358 x 130, stored bottom-up): Clusterball word mark at x 110-248, y 65-80 from the top; the game
+	// draws its red progress bar over rows 88-94 and "Laedt..." from row 111. The mark sits centred under the word,
+	// as wide as the word, in the bar's own red with its top edge on the bar's last row: the growing bar runs
+	// over the tops of the letters, which then hang from it.
 	{"ab219e4e8b4f5492", 358, 130, true, func(c *canvas) {
-		c.text("RE-ENHANCED", red, 7, 254, 344, 78)
+		c.textCentered("RE-ENHANCED", barRed, 11, 179, 138, 105)
 	}},
 }
 
