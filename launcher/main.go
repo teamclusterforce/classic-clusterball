@@ -20,6 +20,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
@@ -350,7 +351,26 @@ func runGUI(cfg *AppConfig) {
 		walk.MsgBox(nil, tr("dlg.error"), err.Error(), walk.MsgBoxIconError)
 		return
 	}
+	centerOnScreen(mw.MainWindow)
+	mw.Show()
 	mw.Run()
+}
+
+// centerOnScreen setzt das Fenster mittig in den Arbeitsbereich seines
+// Bildschirms (ohne Taskleiste) - Windows legt neue Fenster sonst gestaffelt
+// irgendwo an den Rand.
+func centerOnScreen(w *walk.MainWindow) {
+	var mi win.MONITORINFO
+	mi.CbSize = uint32(unsafe.Sizeof(mi))
+	if !win.GetMonitorInfo(win.MonitorFromWindow(w.Handle(), win.MONITOR_DEFAULTTONEAREST), &mi) {
+		return
+	}
+	wa := mi.RcWork
+	b := w.BoundsPixels()
+	b.X = int(wa.Left) + (int(wa.Right-wa.Left)-b.Width)/2
+	b.Y = int(wa.Top) + (int(wa.Bottom-wa.Top)-b.Height)/2
+	b.X, b.Y = max(b.X, int(wa.Left)), max(b.Y, int(wa.Top))
+	w.SetBoundsPixels(b)
 }
 
 // loadLogo bindet ein Logo als High-DPI-Bitmap ein: logisch height hoch,
@@ -430,6 +450,7 @@ func (mw *AppWindow) build() error {
 	err := MainWindow{
 		AssignTo: &mw.MainWindow,
 		Title:    appTitle,
+		Visible:  false, // erst nach dem Zentrieren zeigen, siehe runGUI
 		MinSize:  Size{Width: 820, Height: 680},
 		Size:     Size{Width: 980, Height: 700}, // quer, nicht fast quadratisch
 		// VNear: falls doch einmal Platz uebrig bleibt, sammelt er sich unten
