@@ -113,7 +113,6 @@ typedef struct Tex {
     int font_tall;           // its cells are twice as high: glyph quads are drawn at double height
     int ui_listed;           // TextureDump: hash written to textures\ui_textures.txt (drawn in 2D)
     int unrep_logged;        // LogUnreplaced: already reported
-    int exit_picture;        // the xdgn picture the game shows on exit, see compat_press_escape
     struct Tex *next;
 } Tex;
 static Tex *tex_tab[1024];
@@ -858,10 +857,6 @@ static ID3D11ShaderResourceView *tex_srv(Tex *t) {
             if (ew == 1 && eh == 1) break;
         }
         t->replaced = 0;
-        // "community / www.clusterball.de - mod by xdgn": shown on exit until Esc (1024 x 512; the start splash
-        // is the same picture at 640 x 480).
-        t->exit_picture = (w0 == 1024 && h0 == 512 && tex_hash(t) == 0x289cff2b7dab154cull) ||
-                          (w0 == 640 && h0 == 480 && tex_hash(t) == 0xf7911a4c00622664ull);
         if ((g_tex_dump || g_tex_replace) && w0 >= 8 && h0 >= 8 && !t->dynamic) {
             unsigned long long hash = tex_hash(t);
             if (g_tex_dump) {
@@ -965,7 +960,7 @@ static void write_cb(const CB *c) {
 // Diagnostics ("set texlog N"): logs the next N 2D draws with texture, filter and game-space rectangle,
 // and writes each texture they use once to shots\tex_<name>.png in the game directory.
 static int g_texlog;
-static int g_sharp_font = 1, g_font_replace = 1, g_uv_clamp = 1, g_log_unrep, g_skip_exit_picture = 1;
+static int g_sharp_font = 1, g_font_replace = 1, g_uv_clamp = 1, g_log_unrep;
 static void texlog_draw(const M4 *mvp, const Vtx *v, int n) {
     g_texlog--;
     float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f, u0 = 1e9f, v0 = 1e9f, u1 = -1e9f, v1 = -1e9f;
@@ -1141,11 +1136,6 @@ static void draw_list(D3D11_PRIMITIVE_TOPOLOGY topo, const Vtx *v, int n) {
         Tex *t = tex_get(S.bound[u], 0);
         srv[u] = tex_srv(t);
         if (!srv[u]) continue;
-        if (t->exit_picture && g_skip_exit_picture) { // not drawn; Esc ends the exit screen right away
-            extern void compat_press_escape(void);
-            compat_press_escape();
-            return;
-        }
         smp[u] = get_sampler(t->minf, t->magf, t->ws, t->wt);
         c.tex[u] = 1;
         c.tex[2 + u] = S.env[u];
@@ -1960,7 +1950,6 @@ BOOL WINAPI DllMain(HINSTANCE h, DWORD why, LPVOID r) {
         g_uv_clamp = cfg_num("CB_UVCLAMP", "EdgeClamp2D", 1) != 0;
         g_texlog = (int)cfg_num("CB_TEXLOG", "TexLog", 0); // diagnostics: log the first N 2D draws
         g_log_unrep = cfg_num("CB_LOGUNREPLACED", "LogUnreplaced", 0) != 0; // diagnostics: 2D textures without a pack file
-        g_skip_exit_picture = cfg_num("CB_SKIPEXIT", "SkipExitScreen", 1) != 0; // no xdgn picture (and no Esc) on exit
         g_tex_dump = cfg_num("CB_TEXDUMP", "TextureDump", 0) != 0;
         g_tex_replace = cfg_num("CB_TEXREPLACE", "TextureReplace", 1) != 0;
         DLOG("settings: msaa %d, supersample %d, sharpen %.2f, ao %d, texture replace %d", g_msaa, g_ss, g_sharpen, g_ao_on, g_tex_replace);

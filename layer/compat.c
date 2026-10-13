@@ -312,6 +312,40 @@ extern void inj_mouse(int click, long dx, long dy);
 extern BYTE g_inj_keys[256];
 
 double cfg_num(const char *env, const char *key, double def);
+
+// Test runs only: when no frame has been presented for 5 s, logs where the game's main thread stands (its module and
+// the code addresses on its stack), once. Finds hangs in code paths that never draw.
+static HANDLE g_main_thread;
+static volatile DWORD g_last_swap;
+static DWORD WINAPI hang_watch(void *arg) {
+    (void)arg;
+    for (;;) {
+        Sleep(1000);
+        if (!g_last_swap || GetTickCount() - g_last_swap < 5000) continue;
+        CONTEXT c;
+        memset(&c, 0, sizeof c);
+        c.ContextFlags = CONTEXT_FULL;
+        SuspendThread(g_main_thread);
+        BOOL ok = GetThreadContext(g_main_thread, &c);
+        char mod[MAX_PATH] = "?", line[1024];
+        HMODULE hm;
+        if (ok && GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                                     (LPCSTR)(ULONG_PTR)c.Eip, &hm))
+            GetModuleFileNameA(hm, mod, sizeof mod);
+        int n = 0;
+        DWORD *sp = (DWORD *)(ULONG_PTR)c.Esp;
+        for (int i = 0; ok && i < 2048 && n < (int)sizeof line - 12; i++) {
+            DWORD v;
+            if (!ReadProcessMemory(GetCurrentProcess(), sp + i, &v, 4, NULL)) break;
+            if (v >= 0x401000 && v < 0x5e2000) n += snprintf(line + n, sizeof line - n, " %08lx", v);
+        }
+        line[n] = 0;
+        ResumeThread(g_main_thread);
+        CLOG("hang: no frame for 5 s, main thread eip=%08lx in %s, exe addresses on stack:%s", c.Eip, mod, line);
+        return 0;
+    }
+}
+
 static void script_load(void) {
     char path[MAX_PATH], line[128];
     if (!GetEnvironmentVariableA("CB_SCRIPT", path, sizeof path)) return;
@@ -327,6 +361,9 @@ static void script_load(void) {
     fclose(f);
     { extern int g_script_mode; g_script_mode = cfg_num("CB_SCRIPTLOCK", "ScriptLock", 1) != 0; }
     CLOG("script %s: %d lines", path, g_script_n);
+    DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &g_main_thread, 0, FALSE,
+                    DUPLICATE_SAME_ACCESS);
+    CloseHandle(CreateThread(NULL, 0, hang_watch, NULL, 0, NULL));
 }
 
 static int script_tick(DWORD t) { // returns 1 when a named shot is due this frame
@@ -354,6 +391,7 @@ static int script_tick(DWORD t) { // returns 1 when a named shot is due this fra
 static BOOL WINAPI my_SwapBuffers(HDC dc) {
     DWORD now = GetTickCount();
     if (!g_t0) g_t0 = g_tsec = now;
+    g_last_swap = now;
     g_frames++; g_fps_frames++;
     if (now - g_tsec >= 1000) {
         CLOG("t=%lus frames=%d fps=%d", (now - g_t0) / 1000, g_frames, g_fps_frames);
@@ -430,6 +468,14 @@ static void remove_splash(void) {
     CLOG("splash removed: blit %s, sleep %s", a ? "patched" : "NOT FOUND", b ? "patched" : "NOT FOUND");
 }
 
+// On exit the game blits the "community / www.clusterball.de - mod by xdgn" picture (0x4903b0, called at 0x491f32)
+// and polls the keyboard until a key is pressed; a mouse click there leaves the window unanswered. The call is
+// skipped when either of two flags is set (jnz at 0x491f17 and 0x491f20); the first jnz made unconditional skips it.
+static void remove_exit_picture(void) {
+    static const BYTE jnz[2] = {0x75, 0x21}, jmp[2] = {0xEB, 0x21};
+    CLOG("exit picture: %s", patch_bytes(0x491f17, jnz, jmp, 2) ? "patched" : "NOT FOUND");
+}
+
 // config.cfg is parsed after the window exists; the last call before the OpenGL mode switch at 0x4093ad that reads
 // horiz/vert_game_res is GetDeviceCaps (0x4092c9). Setting the values there makes GameResolution independent of config.cfg.
 static void force_game_res(void) {
@@ -492,7 +538,6 @@ void inj_mouse(int click, long dx, long dy) {
     g_mq_tail = next;
 }
 BYTE g_inj_keys[256];     // DIK scan codes held down
-static DWORD g_esc_until, g_esc_last; // compat_press_escape: Esc held until this tick
 static void *g_kbd_dev;
 int g_script_mode;
 
@@ -535,19 +580,8 @@ static HRESULT WINAPI my_GetDeviceState(void *self, DWORD cb, void *data) {
     if (self == g_kbd_dev && SUCCEEDED(hr) && cb == 256) {
         BYTE *k = data;
         for (int i = 0; i < 256; i++) if (g_inj_keys[i]) k[i] = 0x80;
-        if ((LONG)(GetTickCount() - g_esc_until) < 0) k[0x01] = 0x80; // DIK_ESCAPE, see compat_press_escape
     }
     return hr;
-}
-
-// On exit the game shows the "community / www.clusterball.de - mod by xdgn" picture and waits for Esc. The renderer
-// recognises that picture and calls this instead of drawing it: Esc is reported as held for a moment.
-void compat_press_escape(void) {
-    DWORD now = GetTickCount();
-    if (now - g_esc_last < 1000) return; // once per second while the picture is still being drawn
-    g_esc_last = now;
-    g_esc_until = now + 200;
-    CLOG("exit picture: Esc pressed");
 }
 
 static HRESULT WINAPI my_GetDeviceData(void *self, DWORD cb, void *rgdod, DWORD *n, DWORD flags) {
@@ -673,6 +707,7 @@ void compat_init(void) {
     }
     CLOG("exe=%p imports patched=%d", (void *)exe, g_patched);
     if (cfg_num("CB_NOSPLASH", "RemoveSplash", 1) != 0) remove_splash();
+    if (cfg_num("CB_SKIPEXIT", "SkipExitScreen", 1) != 0) remove_exit_picture();
     if (g_windowed) {
         // Default: 480 lines at the window's aspect (852x480 for 16:9). GameResolution=640x480 restores the original.
         int gw = (int)(480.0 * g_tw / g_th + 0.5) & ~1, gh = 480;
