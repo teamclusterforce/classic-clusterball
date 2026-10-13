@@ -51,9 +51,10 @@ const (
 	tabBarHeight = 40
 )
 
-// Logische Breite des Logos. Die PNG-Datei ist mit 706px absichtlich viel
-// groesser - sie wird als High-DPI-Asset eingebunden (siehe loadLogo).
-const logoWidth = 290
+// Logische Breite des Logos (1170 x 240 px aus assets/cmd/launcherlogo,
+// damit 50 px hoch). Die PNG-Datei ist absichtlich viel groesser - sie wird
+// als High-DPI-Asset eingebunden (siehe loadLogo).
+const logoWidth = 244
 
 // Farbtiefe des Bildspeichers. Unter der Direct3D-Schicht nimmt das Spiel den
 // OpenGL-Pfad, und dort findet es unter aktuellem Windows nur Modi mit 32 Bit -
@@ -336,9 +337,9 @@ func (mw *AppWindow) build() error {
 		// Summe der Breiten muss unter die Fensterbreite passen, sonst wird
 		// das letzte Feld abgeschnitten.
 		StatusBarItems: []StatusBarItem{
-			{AssignTo: &mw.lblStatus, Text: tr("st.ready"), Width: 275},
+			{AssignTo: &mw.lblStatus, Text: tr("st.ready"), Width: 385},
 			{AssignTo: &mw.lblClock, Text: "", Width: 125},
-			{AssignTo: &mw.t.sbBrand, Text: tr("sb.brand"), Width: 215},
+			{AssignTo: &mw.t.sbBrand, Text: tr("sb.brand"), Width: 105},
 			{AssignTo: &mw.t.sbForce, Text: tr("sb.force"), Width: 115,
 				ToolTipText: forceURL,
 				OnClicked:   func() { openURL(forceURL) }},

@@ -126,7 +126,7 @@ var textsDE = map[string]string{
 	"dlg.font":      "Die scharfe Schrift konnte nicht erzeugt werden, das Spiel nutzt seine eigene:\n%s",
 
 	"sb.force": "Get ClusterForce!",
-	"sb.brand": "clusterball.de · XDREAM GAMES NETWORK",
+	"sb.brand": "clusterball.de",
 }
 
 var textsEN = map[string]string{
@@ -225,5 +225,5 @@ var textsEN = map[string]string{
 	"dlg.font":      "Could not create the sharp font, the game uses its own:\n%s",
 
 	"sb.force": "Get ClusterForce!",
-	"sb.brand": "clusterball.de · XDREAM GAMES NETWORK",
+	"sb.brand": "clusterball.de",
 }
