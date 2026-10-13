@@ -471,6 +471,7 @@ static void remove_splash(void) {
 // On exit the game blits the "community / www.clusterball.de - mod by xdgn" picture (0x4903b0, called at 0x491f32)
 // and polls the keyboard until a key is pressed; a mouse click there leaves the window unanswered. The call is
 // skipped when either of two flags is set (jnz at 0x491f17 and 0x491f20); the first jnz made unconditional skips it.
+static void lock_system_options(int w, int h);
 static void remove_exit_picture(void) {
     static const BYTE jnz[2] = {0x75, 0x21}, jmp[2] = {0xEB, 0x21};
     CLOG("exit picture: %s", patch_bytes(0x491f17, jnz, jmp, 2) ? "patched" : "NOT FOUND");
@@ -708,6 +709,7 @@ void compat_init(void) {
     CLOG("exe=%p imports patched=%d", (void *)exe, g_patched);
     if (cfg_num("CB_NOSPLASH", "RemoveSplash", 1) != 0) remove_splash();
     if (cfg_num("CB_SKIPEXIT", "SkipExitScreen", 1) != 0) remove_exit_picture();
+    lock_system_options(g_tw, g_th);
     if (g_windowed) {
         // Default: 480 lines at the window's aspect (852x480 for 16:9). GameResolution=640x480 restores the original.
         int gw = (int)(480.0 * g_tw / g_th + 0.5) & ~1, gh = 480;
@@ -715,6 +717,36 @@ void compat_init(void) {
         // Always set it, also for 640x480: config.cfg may still hold another size from an earlier run.
         patch_game_res(gw, gh);
     }
+}
+
+// Setup - System offers "Grafikmodus" (3dfx / OpenGL) and "Aufloesung" (640 x 480 .. 1024 x 768); with this renderer
+// both are fixed (renderer 4, the window and render size come from clusterball_d3d.ini). Their values are relabelled
+// with what is actually used. When either entry is clicked (and on "Aenderung best."), the game turns the two into
+// pending renderer and resolution at 0x4a4cbe and, if they differ from the current ones, saves them to config.cfg and
+// restarts itself (0x4a5240). The stub below sets the pending values to the current ones instead and continues at the
+// comparison (0x4a4d56), so nothing ever differs.
+__attribute__((naked)) static void system_options_stub(void) {
+    __asm__ volatile(
+        "movw 0xb12246, %ax\n movw %ax, 0xab5ff4\n" // renderer
+        "movw 0xb11e3a, %ax\n movw %ax, 0xab52fc\n" // game width
+        "movw 0xb11e3c, %ax\n movw %ax, 0xab60dc\n" // game height
+        "pushl $0x4a4d56\n ret\n");
+}
+static void lock_system_options(int w, int h) {
+    static char renderer[] = "Direct3D 11", res[24];
+    snprintf(res, sizeof res, "%d x %d", w, h);
+    static const struct { DWORD va, str; int res; } labels[] = {
+        {0x49c400, 0x65e940, 0}, {0x49c40e, 0x65e938, 0},                            // "3dfx", "OpenGL"
+        {0x49c459, 0x65e92c, 1}, {0x49c467, 0x65e920, 1}, {0x49c475, 0x65e910, 1}, // "640 x 480" .. "1024 x 768"
+    };
+    int n = 0;
+    for (int i = 0; i < 5; i++)
+        n += patch_push(labels[i].va, labels[i].str, (DWORD)(ULONG_PTR)(labels[i].res ? res : renderer));
+    static const BYTE lea_push[5] = {0x8D, 0x54, 0x24, 0x34, 0x52}; // lea edx, [esp+0x34]; push edx
+    BYTE jmp[5] = {0xE9};
+    *(DWORD *)(jmp + 1) = (DWORD)(ULONG_PTR)system_options_stub - (0x4a4cbe + 5);
+    int a = patch_bytes(0x4a4cbe, lea_push, jmp, 5);
+    CLOG("system options: %d of 5 labels, apply %s (%s)", n, a ? "locked" : "NOT FOUND", res);
 }
 
 int compat_patched_count(void) { return g_patched; }
