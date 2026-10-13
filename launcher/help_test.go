@@ -47,6 +47,22 @@ func TestHilfeBloecke(t *testing.T) {
 					if !strings.HasPrefix(b.url, "https://") || b.text == "" {
 						t.Errorf("Link %q -> %q", b.text, b.url)
 					}
+				case hbHero:
+					for _, img := range []string{b.text, b.term} {
+						if _, ok := helpImages[img]; !ok {
+							t.Errorf("Titelkarte: Bild %q nicht eingebettet", img)
+						}
+					}
+				case hbButtons:
+					f := strings.Split(b.text, "|")
+					if len(f) < 2 || len(f)%2 != 0 {
+						t.Errorf("Knoepfe: %q", b.text)
+					}
+					for k := 1; k < len(f); k += 2 {
+						if !strings.HasPrefix(strings.TrimSpace(f[k]), "https://") {
+							t.Errorf("Knopf %q -> %q", f[k-1], f[k])
+						}
+					}
 				case hbTerm:
 					if b.term == "" || b.text == "" {
 						t.Errorf("Begriff ohne Text: %q", b.term+b.text)

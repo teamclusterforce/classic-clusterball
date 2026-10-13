@@ -220,6 +220,7 @@ type AppWindow struct {
 	panelUeber         *walk.Composite
 	panelSteuerung     *walk.Composite
 	controls           *controlsView
+	glider             *gliderView
 	help               *helpView
 	about              *helpView // Reiter "Über", gleiche Darstellung ohne Kapitelleiste
 
@@ -374,6 +375,7 @@ func (mw *AppWindow) build() error {
 	mw.help = newHelpView(mw, helpDE, helpEN, true)
 	mw.about = newHelpView(mw, aboutDE, aboutEN, false)
 	mw.controls = newControlsView(mw)
+	mw.glider = &gliderView{mw: mw}
 
 	// Aktiver/inaktiver Reiter: gleiche Groesse, nur Bold wechselt, damit die
 	// Leiste beim Umschalten ruhig bleibt.
@@ -457,6 +459,7 @@ func (mw *AppWindow) build() error {
 	mw.help.attach()
 	mw.about.attach()
 	mw.controls.attach()
+	mw.glider.run(cbExeDir(&mw.cfg))
 
 	// Die Statusleiste zeichnet beim Breiterziehen nur den neuen Streifen; der
 	// Bereich rechts vom letzten Feld behielt so jeden alten Groessengriff
@@ -682,6 +685,8 @@ func (mw *AppWindow) actionColumn() Widget {
 				},
 			},
 			VSpacer{},
+			// Der Gleiter des Spiels, langsam drehend (glider.go).
+			mw.glider.widget(),
 		},
 	}
 }

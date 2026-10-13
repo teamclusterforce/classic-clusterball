@@ -189,3 +189,19 @@ func (g *glyphCache) arrow(dir, dpi int, bg walk.Color) *walk.Bitmap {
 	})
 	return g.bitmap(key, img)
 }
+
+// pill: Knopf w x h Pixel mit runden Enden, Flaeche face, Rand edge, auf bg.
+func (g *glyphCache) pill(w, h, dpi int, face, edge, bg walk.Color) *walk.Bitmap {
+	key := fmt.Sprintf("pill %d %d %d %d %d %d", w, h, dpi, face, edge, bg)
+	if bmp, ok := g.m[key]; ok {
+		return bmp
+	}
+	s := float32(dpi) / 96
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	draw.Draw(img, img.Bounds(), image.NewUniform(nrgba(bg)), image.Point{}, draw.Src)
+	fw, fh := float32(w), float32(h)
+	r := fh / 2
+	fill(img, nrgba(edge), func(z *vector.Rasterizer) { roundRect(z, 0.5, 0.5, fw-0.5, fh-0.5, r-0.5) })
+	fill(img, nrgba(face), func(z *vector.Rasterizer) { roundRect(z, 0.5+s, 0.5+s, fw-0.5-s, fh-0.5-s, r-0.5-s) })
+	return g.bitmap(key, img)
+}

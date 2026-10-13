@@ -8,9 +8,11 @@ package main
 import (
 	"bytes"
 	_ "embed"
+	"fmt"
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
+	"math"
 	"strconv"
 	"strings"
 	"syscall"
@@ -38,18 +40,21 @@ var aboutDE string
 //go:embed about_en.txt
 var aboutEN string
 
-// Bilder des Reiters "Über": das ClusterForce-Logo der Website und eine Szene
-// aus ClusterForce (beide aus clusterforce-website/assets, verkleinert).
+// Bilder des Reiters "Über": je eine Szene aus Clusterball Re-Enhanced (docs/
+// flight-antarctica.jpg) und aus ClusterForce (clusterforce-website/assets/
+// shots/ocean_chain.webp), verkleinert; dazu die Logos der Kopfleiste.
 //
-//go:embed about_logo_cf.png
-var aboutLogoPNG []byte
+//go:embed about_shot_cb.jpg
+var aboutShotCBJPG []byte
 
 //go:embed about_shot.jpg
 var aboutShotJPG []byte
 
 var helpImages = map[string][]byte{
 	"help_interface.jpg": helpInterfaceJPG,
-	"about_logo_cf.png":  aboutLogoPNG,
+	"about_shot_cb.jpg":  aboutShotCBJPG,
+	"logo_cb.png":        logoPNG,
+	"logo_cf.png":        logoCFPNG,
 	"about_shot.jpg":     aboutShotJPG,
 }
 
@@ -60,6 +65,8 @@ const (
 	hbTerm
 	hbImage
 	hbLink
+	hbHero    // Titelkarte: Screenshot, Logo darauf, Zeile rechts unten
+	hbButtons // Reihe von Knoepfen mit Links
 )
 
 type helpBlock struct {
@@ -101,6 +108,17 @@ func parseHelp(src string) []helpChapter {
 			n, w, _ := strings.Cut(line[5:len(line)-1], "|")
 			b = helpBlock{kind: hbImage, text: strings.TrimSpace(n)}
 			b.width, _ = strconv.Atoi(strings.TrimSpace(w))
+		case strings.HasPrefix(line, "[hero ") && strings.HasSuffix(line, "]"):
+			// [hero bild|logo|fokus|zeile]: fokus 0-100 = welcher Streifen des Bildes (oben-unten)
+			f := strings.SplitN(line[6:len(line)-1], "|", 4)
+			for len(f) < 4 {
+				f = append(f, "")
+			}
+			b = helpBlock{kind: hbHero, text: strings.TrimSpace(f[0]), term: strings.TrimSpace(f[1]), url: strings.TrimSpace(f[3])}
+			b.width, _ = strconv.Atoi(strings.TrimSpace(f[2]))
+		case strings.HasPrefix(line, "[buttons ") && strings.HasSuffix(line, "]"):
+			// [buttons Text|URL|Text|URL ...]: der erste Knopf gelb, die anderen hell
+			b = helpBlock{kind: hbButtons, text: line[9 : len(line)-1]}
 		case strings.HasPrefix(line, "[link ") && strings.HasSuffix(line, "]"):
 			t, u, _ := strings.Cut(line[6:len(line)-1], "|")
 			b = helpBlock{kind: hbLink, text: strings.TrimSpace(t), url: strings.TrimSpace(u)}
@@ -152,7 +170,8 @@ type helpItem struct {
 	ball  walk.Color // != 0: Kreis statt Text
 	img   *walk.Bitmap
 	url   string
-	fill  bool // r ist eine Flaeche in color (Akzentlinie)
+	fill  bool                // r ist eine Flaeche in color (Akzentlinie)
+	align walk.DrawTextFormat // Text: Ausrichtung statt Umbruch (0 = umbrechen)
 }
 
 // helpView zeigt Seiten im Format von help_de.txt: die Hilfe mit
@@ -177,8 +196,9 @@ type helpView struct {
 	dragStart int
 	dragFrom  int
 
-	fTitle, fSub, fBody, fTerm, fLink, fNav, fNavActive *walk.Font
-	images                                              map[string]*walk.Bitmap
+	fTitle, fSub, fBody, fTerm, fLink, fNav, fNavActive, fHero *walk.Font
+	glyphs                                                     *glyphCache
+	images                                                     map[string]*walk.Bitmap
 }
 
 func newHelpView(mw *AppWindow, de, en string, withNav bool) *helpView {
@@ -191,6 +211,8 @@ func newHelpView(mw *AppWindow, de, en string, withNav bool) *helpView {
 	h.fLink, _ = walk.NewFont(fontFamily, 10, walk.FontUnderline)
 	h.fNav, _ = walk.NewFont(fontFamily, 10, 0)
 	h.fNavActive, _ = walk.NewFont(fontFamily, 10, walk.FontBold)
+	h.fHero, _ = walk.NewFont(fontFamily, 12, walk.FontBold)
+	h.glyphs = newGlyphCache()
 	return h
 }
 
@@ -344,6 +366,8 @@ func (h *helpView) layout(c *walk.Canvas, w int) {
 		// Abstand nach oben: Zeilen derselben Art stehen enger zusammen.
 		switch {
 		case prev == -1:
+		case b.kind == hbHero:
+			y += px(22)
 		case b.kind == hbSub:
 			y += px(16)
 		case b.kind == prev && (b.kind == hbBullet || b.kind == hbTerm || b.kind == hbLink):
@@ -384,6 +408,37 @@ func (h *helpView) layout(c *walk.Canvas, w int) {
 			s := bmp.Size() // Pixel, siehe image
 			h.items = append(h.items, helpItem{r: walk.Rectangle{X: x0, Y: y, Width: s.Width, Height: s.Height}, img: bmp})
 			y += s.Height
+		case hbHero:
+			hh := width * 36 / 100
+			bmp := h.hero(b.text, b.term, float64(b.width)/100, width, hh)
+			if bmp == nil {
+				break
+			}
+			h.items = append(h.items, helpItem{r: walk.Rectangle{X: x0, Y: y, Width: width, Height: hh}, img: bmp})
+			if b.url != "" {
+				lh := measure(b.url, h.fHero, width)
+				h.items = append(h.items, helpItem{r: walk.Rectangle{X: x0, Y: y + hh - px(16) - lh, Width: width - px(20), Height: lh},
+					text: b.url, font: h.fHero, color: colAccent, align: walk.TextRight | walk.TextSingleLine})
+			}
+			y += hh
+		case hbButtons:
+			f := strings.Split(b.text, "|")
+			x := x0
+			bh := px(32)
+			for k := 0; k+1 < len(f); k += 2 {
+				label, url := strings.TrimSpace(f[k]), strings.TrimSpace(f[k+1])
+				bw := measureW(label, h.fTerm) + px(32)
+				face, edge, ink := colAccent, colAccentDown, colAccentText
+				if k > 0 {
+					face, edge, ink = walk.RGB(255, 255, 255), walk.RGB(176, 184, 198), colHelpTerm
+				}
+				r := walk.Rectangle{X: x, Y: y, Width: bw, Height: bh}
+				h.items = append(h.items,
+					helpItem{r: r, img: h.glyphs.pill(bw, bh, h.page.DPI(), face, edge, walk.RGB(255, 255, 255)), url: url},
+					helpItem{r: r, text: label, font: h.fTerm, color: ink, url: url, align: walk.TextCenter | walk.TextVCenter | walk.TextSingleLine})
+				x += bw + px(10)
+			}
+			y += bh
 		case hbTerm:
 			// Spaltenbreite einmal je zusammenhaengender Begriffsliste.
 			if prev != hbTerm {
@@ -517,7 +572,11 @@ func (h *helpView) paintPage(c *walk.Canvas) error {
 		case it.img != nil:
 			c.DrawImageStretchedPixels(it.img, r)
 		default:
-			c.DrawTextPixels(it.text, it.font, it.color, r, walk.TextWordbreak|walk.TextNoPrefix)
+			format := walk.TextWordbreak
+			if it.align != 0 {
+				format = it.align
+			}
+			c.DrawTextPixels(it.text, it.font, it.color, r, format|walk.TextNoPrefix)
 		}
 	}
 	if track, th := h.thumb(); th.Height > 0 {
@@ -637,4 +696,87 @@ func textWidth(c *walk.Canvas, s string, f *walk.Font) int {
 	u := syscall.StringToUTF16(s)
 	win.GetTextExtentPoint32(hdc, &u[0], int32(len(u)-1), &sz)
 	return int(sz.CX)
+}
+
+// hero setzt eine Titelkarte w x hh Pixel zusammen: den Screenshot shot als
+// Ausschnitt (focus 0 = oberer, 1 = unterer Rand), unten in das Dunkelblau
+// der Kopfleiste verlaufend, darauf links unten das Logo (eins der hellen
+// Kopfleisten-Logos), Ecken abgerundet auf den weissen Seitengrund.
+func (h *helpView) hero(shot, logo string, focus float64, w, hh int) *walk.Bitmap {
+	dpi := h.page.DPI()
+	key := fmt.Sprintf("hero %s %s %.2f %d %d %d", shot, logo, focus, w, hh, dpi)
+	if bmp, ok := h.images[key]; ok {
+		return bmp
+	}
+	src, _, err := image.Decode(bytes.NewReader(helpImages[shot]))
+	if err != nil {
+		return nil
+	}
+	out := image.NewRGBA(image.Rect(0, 0, w, hh))
+	// Ausschnitt mit dem Seitenverhaeltnis der Karte
+	sb := src.Bounds()
+	cw, ch := sb.Dx(), sb.Dx()*hh/w
+	if ch > sb.Dy() {
+		cw, ch = sb.Dy()*w/hh, sb.Dy()
+	}
+	cx := sb.Min.X + (sb.Dx()-cw)/2
+	cy := sb.Min.Y + int(float64(sb.Dy()-ch)*math.Max(0, math.Min(1, focus)))
+	xdraw.CatmullRom.Scale(out, out.Bounds(), src, image.Rect(cx, cy, cx+cw, cy+ch), xdraw.Src, nil)
+	// Verlauf nach unten ins Dunkelblau
+	dark := colHeader
+	for y := 0; y < hh; y++ {
+		t := (float64(y)/float64(hh) - 0.35) / 0.65
+		if t <= 0 {
+			continue
+		}
+		a := 0.88 * t * t * (3 - 2*t)
+		for x := 0; x < w; x++ {
+			o := out.PixOffset(x, y)
+			out.Pix[o] = uint8(float64(out.Pix[o])*(1-a) + float64(dark.R())*a)
+			out.Pix[o+1] = uint8(float64(out.Pix[o+1])*(1-a) + float64(dark.G())*a)
+			out.Pix[o+2] = uint8(float64(out.Pix[o+2])*(1-a) + float64(dark.B())*a)
+		}
+	}
+	// Logo links unten
+	if data, ok := helpImages[logo]; ok {
+		if lg, _, err := image.Decode(bytes.NewReader(data)); err == nil {
+			lb := lg.Bounds()
+			lh := hh * 26 / 100
+			lw := lh * lb.Dx() / lb.Dy()
+			m := h.page.IntFrom96DPI(18)
+			dst := image.Rect(m, hh-m*8/10-lh, m+lw, hh-m*8/10)
+			xdraw.CatmullRom.Scale(out, dst, lg, lb, xdraw.Over, nil)
+		}
+	}
+	// runde Ecken auf Weiss
+	r := float64(h.page.IntFrom96DPI(10))
+	for y := 0; y < hh; y++ {
+		for x := 0; x < w; x++ {
+			dx, dy := 0.0, 0.0
+			if fx := float64(x) + 0.5; fx < r {
+				dx = r - fx
+			} else if fx > float64(w)-r {
+				dx = fx - (float64(w) - r)
+			}
+			if fy := float64(y) + 0.5; fy < r {
+				dy = r - fy
+			} else if fy > float64(hh)-r {
+				dy = fy - (float64(hh) - r)
+			}
+			if dx == 0 || dy == 0 {
+				continue
+			}
+			cover := math.Max(0, math.Min(1, r-math.Sqrt(dx*dx+dy*dy)+0.5))
+			o := out.PixOffset(x, y)
+			for c := 0; c < 3; c++ {
+				out.Pix[o+c] = uint8(float64(out.Pix[o+c])*cover + 255*(1-cover))
+			}
+		}
+	}
+	bmp, err := walk.NewBitmapFromImageForDPI(out, 96)
+	if err != nil {
+		return nil
+	}
+	h.images[key] = bmp
+	return bmp
 }
