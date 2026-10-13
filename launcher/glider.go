@@ -1,6 +1,6 @@
 // Gleiter im Spiel-Reiter: das Schiff des Spiels (shipLOD358 aus Data.mrg mit
 // der Skin Skins\Default\Blue.jpg), langsam drehend. Beides wird zur Laufzeit
-// aus dem Spielordner gelesen - der Launcher bringt keine Spieldaten mit.
+// aus dem Spielordner gelesen - Modell und Skin bringt der Launcher nicht mit.
 // Fehlt etwas, bleibt die Stelle leer.
 //
 // Gezeichnet wird mit einem kleinen Software-Rasterer: perspektivisch,
