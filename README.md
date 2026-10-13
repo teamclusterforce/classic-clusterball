@@ -17,8 +17,10 @@ game:
   (WASD + mouse, mouse wheel) and the game's manual built in, in English and
   German
 - online play via clusterball.de
+- optionally music and ball sounds from ClusterForce instead of the originals
 
-Gameplay, flight model, weapons and worlds stay exactly as they were.
+Gameplay, flight model, weapons and worlds stay exactly as they were; the
+original music and sounds stay too unless you switch them.
 
 Made by Team ClusterForce, who are also working on
 [ClusterForce](https://store.steampowered.com/app/5063650/), a spiritual
@@ -28,9 +30,7 @@ successor to Clusterball.
 
 ### The launcher
 
-| Play | Settings |
-| ---- | -------- |
-| ![Launcher: server list and game start](docs/launcher-play-en.png) | ![Launcher: graphics settings](docs/launcher-settings-en.png) |
+<p align="center"><img src="docs/launcher-en-play.png" alt="Launcher: server list and game start" width="48%"> &nbsp; <img src="docs/launcher-en-settings.png" alt="Launcher: graphics and sound settings" width="48%"></p>
 
 ### The game
 
@@ -90,6 +90,10 @@ Because it sits exactly where the game draws, it does what a wrapper cannot:
 - **Modern presentation:** DXGI flip model, borderless fullscreen at the
   monitor's native resolution without a mode switch, window mode, and
   Alt+Enter to switch while playing
+- **Replacement audio:** with `MusicDir` the music the game streams through
+  BASS (`Levels<venue>.mp3`, `MUSICIntro.mp3`/`Outro.mp3`) comes from another
+  folder, with `DataArchive` the game opens a copy of `Data.mrg` (the launcher
+  builds one with other ball sounds); the original files stay untouched
 - **Mouse wheel:** the game has no wheel binding; the renderer turns each notch
   into a short press of a key (the launcher uses F11/F12), so it can put
   actions such as switching weapons on the wheel
@@ -157,6 +161,11 @@ replaces the old `XDreamCC.ini`. Screenshots are at the
   "WASD + mouse" (default) and "Classic", any key, mouse button or the mouse
   wheel per action; written to the game's `config.cfg` in its own key names
 - Detection of the own external IP for hosting
+- Sound: music from ClusterForce instead of the game's (a 30-second excerpt
+  matching each venue, plus intro and outro) and the ball pickup sound in one
+  of ClusterForce's three variants - Standard, Board computer, Announcer - or
+  the original; built by `assetsbuild_cf_audio.ps1` from the ClusterForce
+  masters
 - Help: the game-related part of the manual from clusterball.de, built in
   (German and English); About: what Re-Enhanced is and its successor
   ClusterForce

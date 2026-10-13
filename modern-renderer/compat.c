@@ -282,6 +282,62 @@ static HMODULE WINAPI my_LoadLibraryA(LPCSTR name) {
     return LoadLibraryA(name);
 }
 
+// --- Replacement audio. The game streams its music with BASS 1.x from ".\Levels\<venue>.mp3" and
+// ".\MUSIC\Intro.mp3"/"Outro.mp3" (two call sites, 5 arguments: mem, file, offset, length, flags). With MusicDir set
+// (clusterball_d3d.ini, relative to the game folder) a file of the same name from there is played instead, when it
+// exists; otherwise the original. DataArchive names a replacement for Data.mrg - the launcher builds one with other
+// ball sounds (Ball1-3.wav) - opened in its place when it exists. The original files are never touched.
+int cfg_str(const char *env, const char *key, char *out, int n);
+static char g_music_dir[MAX_PATH], g_data_archive[MAX_PATH];
+static DWORD(WINAPI *real_BASS_StreamCreateFile)(BOOL, void *, DWORD, DWORD, DWORD);
+static DWORD WINAPI my_BASS_StreamCreateFile(BOOL mem, void *file, DWORD offset, DWORD length, DWORD flags) {
+    char alt[MAX_PATH];
+    if (!mem && file && g_music_dir[0]) {
+        const char *b = strrchr((const char *)file, '\\');
+        b = b ? b + 1 : (const char *)file;
+        snprintf(alt, sizeof alt, "%s\\%s", g_music_dir, b);
+        if (GetFileAttributesA(alt) != INVALID_FILE_ATTRIBUTES) {
+            CLOG("music: %s -> %s", (const char *)file, alt);
+            return real_BASS_StreamCreateFile(mem, alt, offset, length, flags);
+        }
+    }
+    return real_BASS_StreamCreateFile(mem, file, offset, length, flags);
+}
+
+static HANDLE WINAPI my_CreateFileA(LPCSTR name, DWORD acc, DWORD share, LPSECURITY_ATTRIBUTES sa, DWORD disp, DWORD fl,
+                                    HANDLE tmpl) {
+    if (name && g_data_archive[0]) {
+        const char *b = strrchr(name, '\\');
+        b = b ? b + 1 : name;
+        if (!lstrcmpiA(b, "Data.mrg") && GetFileAttributesA(g_data_archive) != INVALID_FILE_ATTRIBUTES) {
+            CLOG("archive: %s -> %s", name, g_data_archive);
+            name = g_data_archive;
+        }
+    }
+    return CreateFileA(name, acc, share, sa, disp, fl, tmpl);
+}
+
+static void audio_init(HMODULE exe) {
+    char dir[MAX_PATH], *s;
+    GetModuleFileNameA(NULL, dir, MAX_PATH);
+    if ((s = strrchr(dir, '\\'))) *s = 0;
+    char v[MAX_PATH];
+    if (cfg_str("CB_MUSICDIR", "MusicDir", v, sizeof v)) {
+        snprintf(g_music_dir, sizeof g_music_dir, "%s\\%s", dir, v);
+        HMODULE bass = GetModuleHandleA("BASS.dll");
+        if (!bass) bass = LoadLibraryA("BASS.dll");
+        real_BASS_StreamCreateFile = bass ? (void *)GetProcAddress(bass, "BASS_StreamCreateFile") : NULL;
+        if (real_BASS_StreamCreateFile)
+            patch_iat(exe, "BASS.dll", "BASS_StreamCreateFile", (void *)my_BASS_StreamCreateFile);
+        CLOG("music dir %s", g_music_dir);
+    }
+    if (cfg_str("CB_DATAARCHIVE", "DataArchive", v, sizeof v)) {
+        snprintf(g_data_archive, sizeof g_data_archive, "%s\\%s", dir, v);
+        patch_iat(exe, "KERNEL32.dll", "CreateFileA", (void *)my_CreateFileA);
+        CLOG("data archive %s", g_data_archive);
+    }
+}
+
 // --- Frame statistics and framebuffer dumps (read back right before the swap, independent of what covers the window) ---
 extern void *gl_real(const char *n);
 extern int backend_d3d;                  // 1 = Direct3D 11 backend, 0 = forwarding GL proxy
@@ -750,6 +806,7 @@ void compat_init(void) {
     }
     patch_iat(exe, "USER32.dll", "EnumDisplaySettingsA", (void *)my_EnumDisplaySettingsA);
     patch_iat(exe, "KERNEL32.dll", "LoadLibraryA", (void *)my_LoadLibraryA);
+    audio_init(exe);
     // Fullscreen: 1 (default) borderless at the monitor, 0 framed window, 2 the game's own display mode switch.
     int fs = (int)cfg_num("CB_FULLSCREEN", "Fullscreen", 1);
     if (fs == 2) g_windowed = 0;

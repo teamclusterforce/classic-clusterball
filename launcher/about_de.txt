@@ -10,6 +10,7 @@ Re-Enhanced macht das Original wieder spielbar, ohne es zu verändern:
 - Ein eigener Direct3D-11-Renderer statt Glide und OpenGL, in jeder Auflösung bis 4K, mit Kantenglättung und Umgebungsverdeckung.
 - HD-Texturen (4-fach), auf Wunsch abschaltbar.
 - Scharfe Schrift in Menüs und HUD, Mausrad und WASD-Steuerung.
+- Wahlweise Musik und Ball-Sounds aus ClusterForce statt der originalen.
 - Dieser Launcher: Server, Einstellungen und Handbuch an einem Ort.
 Spielablauf, Flugmodell, Waffen und Welten bleiben, wie sie waren. Es ist dasselbe Clusterball, nur wieder lauffähig – damit das Original neben seinem Nachfolger gespielt werden kann. Konten, Rangliste und Forum stellt die Community auf clusterball.de.
 [buttons clusterball.de|https://www.clusterball.de/|Quellcode auf GitHub|https://github.com/teamclusterforce/classic-clusterball]

@@ -55,6 +55,10 @@ func prepareGame(cfg *AppConfig) (fontErr, err error) {
 		return nil, err
 	}
 	ensureGameIcon(cfg.CBExePath)
+	// Ton von ClusterForce vor der INI, die auf die Dateien verweist.
+	if err := installCFAudio(dir, &cfg.D3D); err != nil {
+		return nil, err
+	}
 	if err := writeD3DSettings(cfg); err != nil {
 		return nil, err
 	}

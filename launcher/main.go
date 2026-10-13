@@ -208,6 +208,10 @@ type texts struct {
 	setFontRep    *walk.Label
 	setAO         *walk.Label
 	setExternal   *walk.Label
+	setSound      *walk.Label
+	setMusic      *walk.Label
+	setBall       *walk.Label
+	btnPlayBall   *walk.PushButton
 	d3dHint       *walk.Label
 	setGame       *walk.Label
 	setBrightness *walk.Label
@@ -273,6 +277,8 @@ type AppWindow struct {
 	cmbSS      *walk.ComboBox
 	cmbAniso   *walk.ComboBox
 	cmbTexPack *walk.ComboBox
+	cmbMusic   *walk.ComboBox // Musik: Original oder ClusterForce (cfaudio.go)
+	cmbBall    *walk.ComboBox // Ball-Sound, Werte ballSoundValues
 	sldSharpen *walk.Slider
 	lblSharpen *walk.Label
 	chkVSync   *walk.CheckBox
@@ -420,8 +426,8 @@ func (mw *AppWindow) build() error {
 	err := MainWindow{
 		AssignTo: &mw.MainWindow,
 		Title:    appTitle,
-		MinSize:  Size{Width: 820, Height: 620},
-		Size:     Size{Width: 980, Height: 640}, // quer, nicht fast quadratisch
+		MinSize:  Size{Width: 820, Height: 680},
+		Size:     Size{Width: 980, Height: 700}, // quer, nicht fast quadratisch
 		// VNear: falls doch einmal Platz uebrig bleibt, sammelt er sich unten
 		// statt sich als Rand um jedes Element zu legen.
 		Layout: VBox{MarginsZero: true, SpacingZero: true, Alignment: AlignHNearVNear},
@@ -844,6 +850,7 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 							formRow(&mw.t.setAniso, "set.aniso", "", combo(&mw.cmbAniso, anisoLabels(), "")),
 							formRow(&mw.t.setVSync, "set.vsync", "", check(&mw.chkVSync, "")),
 						),
+						mw.networkCard(),
 					),
 					formColumn(
 						// Gamma des Renderers in Prozent: die Helligkeit des Spiels
@@ -855,36 +862,25 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 							formRow(&mw.t.setAO, "set.ao", tr("set.aoTip"), check(&mw.chkAO, tr("set.aoTip"))),
 							formRow(&mw.t.setFontRep, "set.font", tr("set.fontTip"), check(&mw.chkFont, tr("set.fontTip"))),
 						),
-						// Eigene IP fuer den Dedicated Host. Die Adresse des
-						// Master-Servers steht nur in der clusterball.ini (server_ip);
-						// ein Feld fuer die Host-IP gibt es nicht, der Master-Server
-						// liest sie aus dem Absender des UDP-Heartbeats.
-						formCard(&mw.t.setNetwork, "set.network",
-							formRow(&mw.t.setOwnIP, "act.ownIP", "", Composite{
+						// Musik und Ball-Sound von ClusterForce statt der des
+						// Spiels, siehe cfaudio.go.
+						formCard(&mw.t.setSound, "snd.title",
+							formRow(&mw.t.setMusic, "snd.music", tr("snd.musicTip"),
+								combo(&mw.cmbMusic, musicLabels(), tr("snd.musicTip"))),
+							formRow(&mw.t.setBall, "snd.ball", tr("snd.ballTip"), Composite{
 								Layout: HBox{MarginsZero: true, Spacing: 4, Alignment: AlignHNearVCenter},
 								Children: []Widget{
-									LineEdit{AssignTo: &mw.editOwnIP, Text: mw.cfg.OwnIP, Font: fontForm,
-										MinSize: Size{Width: 130}, MaxSize: Size{Width: 130}},
+									combo(&mw.cmbBall, ballSoundLabels(), tr("snd.ballTip")),
 									PushButton{
-										AssignTo:    &mw.t.btnDetectIP,
-										Text:        "↻",
+										AssignTo:    &mw.t.btnPlayBall,
+										Text:        "▶",
 										Font:        fontForm,
 										MinSize:     Size{Width: 26, Height: 23},
 										MaxSize:     Size{Width: 26, Height: 23},
-										ToolTipText: tr("act.detectTip"),
-										OnClicked:   func() { mw.detectExternalIP() },
+										ToolTipText: tr("snd.preview"),
+										OnClicked:   func() { mw.previewBallSound() },
 									},
 									HSpacer{},
-								},
-							}),
-							formRow(&mw.t.setExternal, "act.external", "", CheckBox{
-								AssignTo: &mw.chkExternalIP,
-								Font:     fontForm,
-								OnClicked: func() {
-									mw.cfg.UseExternalIP = mw.chkExternalIP.Checked()
-									if mw.chkExternalIP.Checked() {
-										mw.detectExternalIP()
-									}
 								},
 							}),
 						),
@@ -916,6 +912,41 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 			),
 		},
 	}
+}
+
+// networkCard: Eigene IP fuer den Dedicated Host. Die Adresse des Master-Servers steht
+// nur in der clusterball.ini (server_ip); ein Feld fuer die Host-IP gibt es nicht, der
+// Master-Server liest sie aus dem Absender des UDP-Heartbeats.
+func (mw *AppWindow) networkCard() Widget {
+	return formCard(&mw.t.setNetwork, "set.network",
+		formRow(&mw.t.setOwnIP, "act.ownIP", "", Composite{
+			Layout: HBox{MarginsZero: true, Spacing: 4, Alignment: AlignHNearVCenter},
+			Children: []Widget{
+				LineEdit{AssignTo: &mw.editOwnIP, Text: mw.cfg.OwnIP, Font: fontForm,
+					MinSize: Size{Width: 130}, MaxSize: Size{Width: 130}},
+				PushButton{
+					AssignTo:    &mw.t.btnDetectIP,
+					Text:        "↻",
+					Font:        fontForm,
+					MinSize:     Size{Width: 26, Height: 23},
+					MaxSize:     Size{Width: 26, Height: 23},
+					ToolTipText: tr("act.detectTip"),
+					OnClicked:   func() { mw.detectExternalIP() },
+				},
+				HSpacer{},
+			},
+		}),
+		formRow(&mw.t.setExternal, "act.external", "", CheckBox{
+			AssignTo: &mw.chkExternalIP,
+			Font:     fontForm,
+			OnClicked: func() {
+				mw.cfg.UseExternalIP = mw.chkExternalIP.Checked()
+				if mw.chkExternalIP.Checked() {
+					mw.detectExternalIP()
+				}
+			},
+		}),
+	)
 }
 
 // Grafik-Voreinstellungen: Kantenglaettung, Supersampling, anisotrope
@@ -1073,6 +1104,16 @@ func (mw *AppWindow) retranslate() {
 	refill(mw.cmbSS, ssLabels())
 	refill(mw.cmbAniso, anisoLabels())
 	refill(mw.cmbTexPack, packLabels())
+	refill(mw.cmbMusic, musicLabels())
+	refill(mw.cmbBall, ballSoundLabels())
+	mw.t.setSound.SetText(tr("snd.title"))
+	mw.t.setMusic.SetText(tr("snd.music"))
+	mw.t.setMusic.SetToolTipText(tr("snd.musicTip"))
+	mw.cmbMusic.SetToolTipText(tr("snd.musicTip"))
+	mw.t.setBall.SetText(tr("snd.ball"))
+	mw.t.setBall.SetToolTipText(tr("snd.ballTip"))
+	mw.cmbBall.SetToolTipText(tr("snd.ballTip"))
+	mw.t.btnPlayBall.SetToolTipText(tr("snd.preview"))
 
 	mw.t.setNetwork.SetText(tr("set.network"))
 	mw.t.btnSave.SetText(tr("set.save"))
@@ -1189,6 +1230,12 @@ func (mw *AppWindow) showD3D(d D3DSettings) {
 	mw.chkVSync.SetChecked(d.VSync)
 	mw.chkFont.SetChecked(d.FontReplace)
 	mw.chkAO.SetChecked(d.AmbientOcc)
+	if d.CFMusic {
+		mw.cmbMusic.SetCurrentIndex(1)
+	} else {
+		mw.cmbMusic.SetCurrentIndex(0)
+	}
+	mw.cmbBall.SetCurrentIndex(indexOfStr(ballSoundValues, d.BallSound))
 	mw.sldMouse.SetValue(clampInt(int(d.MouseScale*100+0.5), 5, 100))
 	mw.lblMouse.SetText(fmt.Sprintf("%d", mw.sldMouse.Value()))
 }
@@ -1261,6 +1308,10 @@ func (mw *AppWindow) readSettings() {
 		d.VSync = mw.chkVSync.Checked()
 		d.FontReplace = mw.chkFont.Checked()
 		d.AmbientOcc = mw.chkAO.Checked()
+		d.CFMusic = mw.cmbMusic.CurrentIndex() == 1
+		if i, ok := pick(mw.cmbBall, len(ballSoundValues)); ok {
+			d.BallSound = ballSoundValues[i]
+		}
 		d.MouseScale = float64(mw.sldMouse.Value()) / 100
 	}
 

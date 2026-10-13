@@ -27,6 +27,11 @@ type D3DSettings struct {
 	// Helligkeit als Gamma des Renderers in Prozent, 100 = unverändert (INI 0.50 … 1.50). Die Helligkeit des
 	// Spiels selbst (config.cfg) wirkt nur im alten Glide-Pfad.
 	Gamma int
+
+	// Ton von ClusterForce (cfaudio.go): Musik statt der des Spiels, und der
+	// Ball-Sound ("" = der des Spiels, sonst eine Variante aus ballSoundSets).
+	CFMusic   bool
+	BallSound string
 }
 
 // defaultD3D entspricht den Vorgaben der Schicht.
@@ -204,6 +209,12 @@ func readD3DSettings(cfg *AppConfig) {
 	d.AmbientOcc = ini.Bool("AmbientOcclusion", d.AmbientOcc)
 	d.MouseScale = ini.Float("MouseScale", d.MouseScale)
 	d.Gamma = clampInt(int(ini.Float("Gamma", float64(d.Gamma)/100)*100+0.5), 50, 150)
+	if v, ok := ini.Get("MusicDir"); ok {
+		d.CFMusic = strings.TrimSpace(v) != ""
+	}
+	if v, ok := ini.Get("DataArchive"); ok {
+		d.BallSound = ballVariantOf(strings.TrimSpace(v))
+	}
 	cfg.D3D = d
 }
 
@@ -243,6 +254,17 @@ func applyD3DSettings(ini *IniFile, d *D3DSettings) {
 	// Mausrad als F11/F12 fuer die Belegung, siehe controls.go.
 	ini.Set("WheelUp", strconv.Itoa(wheelUpDIK))
 	ini.Set("WheelDown", strconv.Itoa(wheelDownDIK))
+	// Ton von ClusterForce, siehe cfaudio.go. Leer = der des Spiels.
+	if d.CFMusic {
+		ini.Set("MusicDir", cfMusicSubdir)
+	} else {
+		ini.Set("MusicDir", "")
+	}
+	if _, ok := ballSoundSets[d.BallSound]; ok {
+		ini.Set("DataArchive", dataArchiveName(d.BallSound))
+	} else {
+		ini.Set("DataArchive", "")
+	}
 }
 
 // normalizeResolution bringt "1920 x 1080" o.ä. auf "1920x1080"; leer und

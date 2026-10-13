@@ -209,7 +209,7 @@ func formCard(title **walk.Label, key string, rows ...Widget) Widget {
 	// Feste Hoehe: Tastensymbole sind CustomWidgets und melden immer "will
 	// wachsen" - ohne Deckel wuerde die Karte auf die Hoehe der Nachbarspalte
 	// gestreckt und ihre Zeilen auseinandergezogen.
-	h := 2 + 20 + 20 + 3 + gapS + len(rows)*formRowHeight + 2
+	h := 2 + 14 + 20 + 3 + gapS + len(rows)*formRowHeight + 2
 	return Composite{
 		MinSize:    Size{Height: h},
 		MaxSize:    Size{Height: h},
@@ -218,7 +218,7 @@ func formCard(title **walk.Label, key string, rows ...Widget) Widget {
 		Children: []Widget{
 			Composite{
 				Background: SolidColorBrush{Color: colCard},
-				Layout: VBox{Margins: Margins{Left: formCardPad, Top: 10, Right: formCardPad, Bottom: 10},
+				Layout: VBox{Margins: Margins{Left: formCardPad, Top: 8, Right: formCardPad, Bottom: 6},
 					SpacingZero: true, Alignment: AlignHNearVNear},
 				Children: children,
 			},
