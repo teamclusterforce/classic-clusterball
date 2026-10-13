@@ -80,7 +80,7 @@ func TestPatchArchiveEchteDataMrg(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		repl["Ball"+string(rune('1'+i))+".wav"] = w
+		repl[ballSlots[i]] = w
 	}
 	got, err := patchArchive(data, repl)
 	if err != nil {
@@ -93,7 +93,7 @@ func TestPatchArchiveEchteDataMrg(t *testing.T) {
 		}
 	}
 	// alle anderen Eintraege unveraendert lesbar
-	for _, n := range []string{"Ball.wav", "PickBall.wav", "shipLOD358.3GM"} {
+	for _, n := range []string{"PickBall.wav", "InkBall.wav", "shipLOD358.3GM"} {
 		a, _ := mrgEntry(data, n)
 		b, _ := mrgEntry(got, n)
 		if !bytes.Equal(a, b) {
@@ -103,7 +103,8 @@ func TestPatchArchiveEchteDataMrg(t *testing.T) {
 }
 
 // Jede Venue des Spiels sowie Intro und Outro haben einen Track, jeder Ball-
-// Sound liegt als 44,1-kHz-Stereo-PCM vor wie Ball1-3.wav des Spiels.
+// Sound liegt im Format der Ansagen des Spiels vor (Ball.wav: 22050 Hz Mono,
+// 16 Bit, schlichter 44-Byte-Kopf).
 func TestEingebetteterTon(t *testing.T) {
 	for _, n := range []string{"Intro", "Outro", "Antarctica", "Bora Bora", "China", "Easter Island", "Egal", "Egypt",
 		"Electronica", "Gobi", "Green Garden V2", "Hangarball", "HelterSkelter", "Lunar", "Matterhorn", "Metropolis",
@@ -121,8 +122,8 @@ func TestEingebetteterTon(t *testing.T) {
 				t.Fatalf("%s: %v", n, err)
 			}
 			if string(d[0:4]) != "RIFF" || string(d[8:12]) != "WAVE" || le.Uint16(d[20:]) != 1 ||
-				le.Uint16(d[22:]) != 2 || le.Uint32(d[24:]) != 44100 || le.Uint16(d[34:]) != 16 {
-				t.Errorf("%s: kein 44,1-kHz-Stereo-PCM", n)
+				le.Uint16(d[22:]) != 1 || le.Uint32(d[24:]) != 22050 || le.Uint16(d[34:]) != 16 || string(d[36:40]) != "data" {
+				t.Errorf("%s: nicht im Format der Ansagen", n)
 			}
 		}
 	}

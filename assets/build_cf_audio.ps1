@@ -1,11 +1,12 @@
 # build_cf_audio.ps1 -CF <ClusterForce workspace>
 # Builds the launcher's ClusterForce audio from the ClusterForce masters:
-#  - launcher\audio\music\<Venue>.mp3, Intro.mp3, Outro.mp3: a 30-second excerpt of the matching ClusterForce track,
-#    looping seamlessly (the last two seconds are faded into the first two), loudness-normalised, MP3 128 kbit/s,
-#    44.1 kHz stereo like the game's own music. The game plays music only in the menus and while a venue loads, so
-#    30 seconds are enough; only these shortened versions go into the repository, never the masters.
-#  - launcher\audio\ball\<variant>.wav: the three ball pickup sounds ClusterForce offers, as 44.1 kHz 16-bit stereo
-#    PCM like the game's Ball1-3.wav.
+#  - launcher\audio\music\<Venue>.mp3, Outro.mp3: a 30-second excerpt of the matching ClusterForce track, looping
+#    seamlessly (the last two seconds are faded into the first two), loudness-normalised, MP3 128 kbit/s, 44.1 kHz
+#    stereo like the game's own music. The game plays music only in the menus and while a venue loads, so 30 seconds
+#    are enough; only these shortened versions go into the repository, never the masters.
+#  - launcher\audio\music\Intro.mp3: the menu music, the whole song of the ClusterForce teaser, MP3 128 kbit/s.
+#  - launcher\audio\ball\<variant>.wav: the three ball pickup sounds ClusterForce offers, in the format of the game's
+#    own announcer clips such as Ball.wav: 22050 Hz mono 16-bit PCM with a plain 44-byte header.
 # Needs ffmpeg on the PATH.
 param([string]$CF = (Join-Path ([Environment]::GetFolderPath('Desktop')) 'CF'))
 $ErrorActionPreference = 'Stop'
@@ -16,10 +17,9 @@ $musicOut = Join-Path $root 'launcher\audio\music'
 $ballOut = Join-Path $root 'launcher\audio\ball'
 New-Item -ItemType Directory -Force $musicOut, $ballOut | Out-Null
 
-# Game file (without .mp3) -> ClusterForce master. Intro and Outro start at the beginning of their track, the
-# venues a quarter into it, past the build-up.
+# Game file (without .mp3) -> ClusterForce master. The Outro starts at the beginning of its track, the venues a
+# quarter into it, past the build-up. The Intro is not cut, see below.
 $music = [ordered]@{
-    'Intro'           = 'IntroA'
     'Outro'           = 'Outro'
     'Antarctica'      = 'Whiteout'
     'Bora Bora'       = 'Ocean Boulevard'
@@ -51,7 +51,7 @@ foreach ($game in $music.Keys) {
     $src = Join-Path $masters ($music[$game] + '.wav')
     if (-not (Test-Path $src)) { throw "missing master: $src" }
     $dur = [double](& ffprobe -v error -show_entries format=duration -of csv=p=0 $src)
-    $start = if ($game -in 'Intro', 'Outro') { 0 } else { [math]::Round($dur * 0.25, 1) }
+    $start = if ($game -eq 'Outro') { 0 } else { [math]::Round($dur * 0.25, 1) }
     $total = $len + $xf
     $graph = "[0:a]asplit=3[a][b][c];" +
         "[a]atrim=0:$xf,asetpts=PTS-STARTPTS,afade=t=in:d=$xf[head];" +
@@ -66,6 +66,15 @@ foreach ($game in $music.Keys) {
     "{0,-16} <- {1} (from {2} s)" -f $game, $music[$game], $start
 }
 
+
+# The menu music: the whole song of the ClusterForce teaser (trailer-cut.cmd), not cut, loudness-normalised like the
+# rest, MP3 128 kbit/s.
+$teaser = Join-Path $CF '_Import\clusterforce (1).wav'
+if (-not (Test-Path $teaser)) { throw "missing teaser song: $teaser" }
+& ffmpeg -hide_banner -loglevel error -y -i $teaser -af 'loudnorm=I=-16:TP=-1.5,aresample=44100,asetpts=N/SR/TB' `
+    -map_metadata -1 -c:a libmp3lame -b:a 128k -ar 44100 -ac 2 (Join-Path $musicOut 'Intro.mp3')
+if ($LASTEXITCODE) { throw 'ffmpeg failed for Intro' }
+'Intro            <- teaser song (whole)'
 # Ball pickup sounds: ClusterForce's three sets (CF-2193). The announcer call exists from two speakers.
 $balls = [ordered]@{
     'standard'   = 'balls\ball_ground.wav'
@@ -76,7 +85,7 @@ $balls = [ordered]@{
 foreach ($name in $balls.Keys) {
     $src = Join-Path $sounds $balls[$name]
     $dst = Join-Path $ballOut "$name.wav"
-    & ffmpeg -hide_banner -loglevel error -y -i $src -map_metadata -1 -fflags +bitexact -c:a pcm_s16le -ar 44100 -ac 2 $dst
+    & ffmpeg -hide_banner -loglevel error -y -i $src -map_metadata -1 -fflags +bitexact -c:a pcm_s16le -ar 22050 -ac 1 $dst
     if ($LASTEXITCODE) { throw "ffmpeg failed for $name" }
     "{0,-16} <- {1}" -f $name, $balls[$name]
 }

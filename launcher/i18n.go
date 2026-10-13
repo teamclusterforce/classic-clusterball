@@ -58,7 +58,7 @@ var textsDE = map[string]string{
 
 	"snd.title":         "Ton",
 	"snd.music":         "Musik",
-	"snd.musicTip":      "ClusterForce: zu jeder Venue ein passender 30-Sekunden-Ausschnitt aus der Musik von ClusterForce, dazu Intro und Outro. Musik läuft in Clusterball nur in den Menüs und beim Laden.",
+	"snd.musicTip":      "ClusterForce: im Menü der Song aus dem ClusterForce-Teaser, zu jeder Venue ein passender 30-Sekunden-Ausschnitt aus der Musik von ClusterForce. Musik läuft in Clusterball nur in den Menüs und beim Laden.",
 	"snd.musicOriginal": "Original",
 	"snd.musicCF":       "ClusterForce",
 	"snd.ball":          "Ball-Sound",
@@ -212,7 +212,7 @@ var textsEN = map[string]string{
 
 	"snd.title":         "Sound",
 	"snd.music":         "Music",
-	"snd.musicTip":      "ClusterForce: a matching 30-second excerpt of ClusterForce's music for every venue, plus intro and outro. Clusterball plays music only in the menus and while loading.",
+	"snd.musicTip":      "ClusterForce: the song of the ClusterForce teaser in the menus and a matching 30-second excerpt of ClusterForce's music for every venue. Clusterball plays music only in the menus and while loading.",
 	"snd.musicOriginal": "Original",
 	"snd.musicCF":       "ClusterForce",
 	"snd.ball":          "Ball sound",

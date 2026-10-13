@@ -91,7 +91,7 @@ Because it sits exactly where the game draws, it does what a wrapper cannot:
   monitor's native resolution without a mode switch, window mode, and
   Alt+Enter to switch while playing
 - **Replacement audio:** with `MusicDir` the music the game streams through
-  BASS (`Levels<venue>.mp3`, `MUSICIntro.mp3`/`Outro.mp3`) comes from another
+  BASS (`Levels\<venue>.mp3`, `MUSIC\Intro.mp3`/`Outro.mp3`) comes from another
   folder, with `DataArchive` the game opens a copy of `Data.mrg` (the launcher
   builds one with other ball sounds); the original files stay untouched
 - **Mouse wheel:** the game has no wheel binding; the renderer turns each notch
@@ -161,11 +161,11 @@ replaces the old `XDreamCC.ini`. Screenshots are at the
   "WASD + mouse" (default) and "Classic", any key, mouse button or the mouse
   wheel per action; written to the game's `config.cfg` in its own key names
 - Detection of the own external IP for hosting
-- Sound: music from ClusterForce instead of the game's (a 30-second excerpt
-  matching each venue, plus intro and outro) and the ball pickup sound in one
-  of ClusterForce's three variants - Standard, Board computer, Announcer - or
-  the original; built by `assetsbuild_cf_audio.ps1` from the ClusterForce
-  masters
+- Sound: music from ClusterForce instead of the game's (the song of the
+  ClusterForce teaser in the menus, a 30-second excerpt matching each venue)
+  and the announcer's "Ball" in one of ClusterForce's three variants -
+  Standard, Board computer, Announcer - or the original; built by
+  `assets\build_cf_audio.ps1` from the ClusterForce masters
 - Help: the game-related part of the manual from clusterball.de, built in
   (German and English); About: what Re-Enhanced is and its successor
   ClusterForce

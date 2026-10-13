@@ -1,6 +1,7 @@
 // Musik und Ball-Sound von ClusterForce statt der des Spiels (Einstellungen →
 // Ton). Die Dateien erzeugt assets\build_cf_audio.ps1 aus den ClusterForce-
-// Mastern: je Venue sowie Intro und Outro ein 30-Sekunden-Ausschnitt als MP3
+// Mastern: je Venue sowie fuer das Outro ein 30-Sekunden-Ausschnitt, als Intro der
+// ganze Song des ClusterForce-Teasers, alles als MP3
 // mit 128 kbit/s, dazu die Ball-Sounds als WAV im Format des Spiels.
 //
 // Die Originaldateien des Spiels bleiben unangetastet. Der Launcher legt beim
@@ -8,7 +9,9 @@
 // clusterball_d3d.ini ein, was der Renderer statt des Originals nehmen soll:
 // MusicDir (die Musik spielt das Spiel ueber BASS aus Levels\<Venue>.mp3 und
 // MUSIC\Intro.mp3/Outro.mp3) und DataArchive, eine Kopie der Data.mrg, in der
-// nur Ball1-3.wav ersetzt sind (die Ball-Sounds stecken im Archiv).
+// nur die Ball-Sounds ersetzt sind (sie stecken im Archiv): Ball.wav ist der
+// Sprecher, der im Spiel "Ball" sagt; Ball1-3.wav sind die dumpfen "Blobs" des
+// alten Blob-Modus ("Blob statt Ballmann"), die mit ersetzt werden.
 
 package main
 
@@ -32,14 +35,18 @@ const (
 	cfMusicSubdir = `clusterforce\music`
 )
 
-// Ball-Sound-Varianten: Wert in den Einstellungen -> WAV fuer Ball1, Ball2,
-// Ball3. "" ist der Sound des Spiels. Die Sprecher-Ansage gibt es in
-// ClusterForce von zwei Sprechern; sie wechseln sich ab.
-var ballSoundSets = map[string][3]string{
-	"standard":  {"standard", "standard", "standard"},
-	"computer":  {"computer", "computer", "computer"},
-	"announcer": {"announcer1", "announcer2", "announcer1"},
+// Ball-Sound-Varianten: Wert in den Einstellungen -> WAV fuer Ball.wav, Ball1,
+// Ball2, Ball3. "" ist der Sound des Spiels. Die Sprecher-Ansage gibt es in
+// ClusterForce von zwei Sprechern; der erste spricht "Ball", in den Blob-
+// Plaetzen wechseln sie sich ab.
+var ballSoundSets = map[string][4]string{
+	"standard":  {"standard", "standard", "standard", "standard"},
+	"computer":  {"computer", "computer", "computer", "computer"},
+	"announcer": {"announcer1", "announcer1", "announcer2", "announcer1"},
 }
+
+// ballSlots: die Eintraege der Data.mrg in der Reihenfolge von ballSoundSets.
+var ballSlots = [4]string{"Ball.wav", "Ball1.wav", "Ball2.wav", "Ball3.wav"}
 
 // ballSoundValues: Reihenfolge der Auswahlliste.
 var ballSoundValues = []string{"", "standard", "computer", "announcer"}
@@ -100,7 +107,7 @@ func installCFAudio(dir string, d *D3DSettings) error {
 			if err != nil {
 				return err
 			}
-			repl["Ball"+string(rune('1'+i))+".wav"] = wav
+			repl[ballSlots[i]] = wav
 		}
 		patched, err := patchArchive(orig, repl)
 		if err != nil {
@@ -208,7 +215,7 @@ var (
 )
 
 // previewBallSound spielt den in der Liste gewaehlten Ball-Sound einmal ab -
-// beim Original den Ball1.wav aus der Data.mrg des Spiels.
+// beim Original den Sprecher (Ball.wav) aus der Data.mrg des Spiels.
 func (mw *AppWindow) previewBallSound() {
 	i := mw.cmbBall.CurrentIndex()
 	if i < 0 || i >= len(ballSoundValues) {
@@ -221,7 +228,7 @@ func (mw *AppWindow) previewBallSound() {
 			mw.setStatus(err.Error())
 			return
 		}
-		if wav, err = mrgEntry(data, "Ball1.wav"); err != nil {
+		if wav, err = mrgEntry(data, "Ball.wav"); err != nil {
 			mw.setStatus(err.Error())
 			return
 		}
