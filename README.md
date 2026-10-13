@@ -2,46 +2,99 @@
 
 Tools and infrastructure to make the game Clusterball (Daydream Software, 2000)
 playable again on modern systems - sharp, in the monitor's native resolution -
-and online via [clusterball.de](http://www.clusterball.de).
+and online via [clusterball.de](http://www.clusterball.de). At its heart is a
+native Direct3D 11 renderer written for this game.
 
-The repository has two parts:
+![Main menu in 4K](docs/main-menu.jpg)
 
-- [modern-renderer/](modern-renderer/) - the **Direct3D 11 renderer**. Clusterball.exe only loads
-  a graphics library named `opengl32.dll` from its own folder, so the renderer
-  carries that file name; it implements the drawing calls the game makes on
-  Direct3D 11 and fixes what keeps the game from running properly on current
-  Windows.
+All game screenshots on this page are unscaled frames from the renderer at
+3840 × 2160 with the highest settings (8× MSAA, 2× supersampling, 16×
+anisotropic filtering, ambient occlusion, 16× texture pack), saved as JPEG at
+quality 95; the before/after crops are lossless PNG. Click one to see it at
+full size.
+
+## A native Direct3D 11 renderer
+
+Clusterball was written for 3dfx Glide and OpenGL. Until now it ran on today's
+PCs through nGlide (a Glide wrapper), Mesa or the graphics driver's legacy
+OpenGL path - all of them pass the game's drawing on call by call and have to
+take the picture exactly as the game hands it over, in its fixed low
+resolution.
+
+Re-Enhanced replaces the graphics library itself. `Clusterball.exe` loads a
+library named `opengl32.dll` from its own folder; ours implements the OpenGL
+subset the game uses directly on Direct3D 11. There is no translation layer
+underneath, no Glide and no OpenGL driver involved - one DLL of about 450 KB
+that uses only Windows' own Direct3D 11 and DXGI.
+
+Because it sits exactly where the game draws, it does what a wrapper cannot:
+
+- **Any resolution:** renders at any size up to 4K and beyond, independent of
+  the game's fixed 640 × 480 OpenGL mode; the game's layout stays as it was
+- **Anti-aliasing and filtering:** MSAA up to 8×, supersampling, anisotropic
+  filtering up to 16×, sharpening, colour grading and optional ambient
+  occlusion from the depth buffer
+- **High-resolution textures:** every texture is recognised by a hash of its
+  pixels and replaced from a texture pack (4× or 16× the original size) -
+  including the pictures the game composes at run time and the parts of its
+  text texture, such as menu titles, tab labels and "LADE ..."
+- **Sharp text:** the 8 × 8 pixel menu and HUD font is replaced by a
+  high-resolution atlas, drawn with cells of twice the height so accents and
+  descenders fit
+- **Clean 2D:** menu pictures are sampled only inside their own rectangle - no
+  seams, stripes or colour-key lines at their edges
+- **Modern presentation:** DXGI flip model, borderless fullscreen at the
+  monitor's native resolution without a mode switch, window mode, and
+  Alt+Enter to switch while playing
+- **Fixes around the picture:** mouse via DirectInput with the Windows pointer
+  speed, no self-minimising, no crash on the game's display-mode probing
+  (uninitialised `DEVMODE`, 16-bit modes, oversized texture probe)
+- **Honest settings in the game:** Setup - System shows "Direct3D 11" and the
+  resolution actually rendered; the old renderer and resolution choices there
+  can no longer switch the game back to Glide or 640 × 480 or restart it
+
+![Menu before and after](docs/compare-menu.png)
+
+![HUD before (top) and after (bottom), 100 % crop](docs/compare-hud.png)
+
+"Before" is the same game at the same size with the texture pack, the font
+replacement, anti-aliasing and post-processing switched off - the way the
+original renders.
+
+All settings live in `clusterball_d3d.ini` next to `Clusterball.exe`; the
+launcher writes it, and the template with every key and its meaning is
+[launcher/layer/clusterball_d3d.ini](launcher/layer/clusterball_d3d.ini).
+An environment variable `CB_<NAME>` overrides a value (e.g. `CB_RES=1920x1080`).
+
+## Screenshots
+
+### Menus
+
+| | |
+| - | - |
+| ![Training: venue and line-up](docs/training.jpg) | ![Host a game](docs/host.jpg) |
+| ![Setup: options](docs/setup-options.jpg) | ![Setup: system, with the renderer and resolution in use](docs/setup-system.jpg) |
+
+### In the game
+
+![Bora Bora](docs/flight-bora-bora.jpg)
+
+![Antarctica](docs/flight-antarctica.jpg)
+
+## Repository
+
+The repository has two main parts, plus the scripts for the texture packs and
+the development tools:
+
+- [modern-renderer/](modern-renderer/) - the **Direct3D 11 renderer**
+  (`opengl32.dll`, see above)
 - [launcher/](launcher/) - the launcher **Command Center**
   (`ClusterballCC.exe`). It brings the renderer along, installs it next to the
   game and configures it.
-
-Glide, nGlide, Mesa and the old renderer choice are gone: the game always
-runs on Direct3D 11.
-
-## Direct3D 11 renderer
-
-- Borderless fullscreen in the monitor's native resolution, or a window;
-  Alt+Enter switches while playing
-- Free render resolution, anti-aliasing (MSAA), supersampling, anisotropic
-  filtering, sharpening and colour grading, optional ambient occlusion
-- High-resolution texture packs: every texture is identified by a hash of its
-  pixels and replaced by `textures\<pack>\<hash>.dds` - including the text
-  pictures the game composes at run time (menu titles, "LADE ...")
-- Sharp menu and HUD font: the game's 8 × 8 pixel font atlas is replaced by a
-  high-resolution one (generated by the Command Center from Windows'
-  Bahnschrift), drawn with cells of twice the height so accents and
-  descenders fit
-- 2D pictures sample only inside their own rectangle: no seams or colour-key
-  lines at the edges of menu pictures
-- No "mod by xdgn" splash on start and no picture waiting for Esc on exit
-- Mouse via DirectInput with the Windows pointer speed, no self-minimising,
-  no crash on the game's display-mode probing (uninitialised `DEVMODE`,
-  16-bit modes, oversized texture probe)
-
-All settings live in `clusterball_d3d.ini` next to `Clusterball.exe`; the
-template with every key and its meaning is
-[launcher/layer/clusterball_d3d.ini](launcher/layer/clusterball_d3d.ini).
-An environment variable `CB_<NAME>` overrides a value (e.g. `CB_RES=1920x1080`).
+- [assets/](assets/) - scripts that build the texture packs and redraw the
+  menu text (see [Texture packs](#texture-packs)).
+- [tools/](tools/) - development tools: call tracer, analysis programs and
+  the renderer's test scripts (see [Development tools](#development-tools)).
 
 ## Command Center
 
@@ -49,6 +102,10 @@ The launcher replaces the outdated XDream Command Center (XDreamCC) that
 originally shipped with the game. XDreamCC relies on XDream services that
 were shut down long ago; the Command Center takes over all of its duties and
 replaces the old `XDreamCC.ini`.
+
+| Game | Settings |
+| ---- | -------- |
+| ![Command Center, Game tab](docs/launcher-game.png) | ![Command Center, Settings tab](docs/launcher-settings.png) |
 
 ### Features
 
