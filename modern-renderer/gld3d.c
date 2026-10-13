@@ -29,16 +29,35 @@ extern void write_bmp24_topdown(const char *name, int w, int h, const BYTE *bgra
 int backend_d3d = 1;
 void *gl_real(const char *n) { return NULL; }
 
+// d3d.log only with logging on (log_enabled in compat.c). Otherwise the lines are kept in memory, and dlog_flush
+// writes them out when Direct3D cannot start - the error message points the player to that file.
+extern int log_enabled(void);
 static FILE *g_dlog;
+static char g_dbuf[32768];
+static int g_dlen;
 static void DLOG(const char *fmt, ...) {
-    if (!g_dlog) g_dlog = fopen("d3d.log", "w");
-    if (!g_dlog) return;
+    char line[1024];
     va_list a;
     va_start(a, fmt);
-    vfprintf(g_dlog, fmt, a);
+    vsnprintf(line, sizeof line, fmt, a);
     va_end(a);
-    fputc('\n', g_dlog);
+    if (!log_enabled()) {
+        int n = snprintf(g_dbuf + g_dlen, sizeof g_dbuf - g_dlen, "%s\n", line);
+        if (n > 0 && g_dlen + n < (int)sizeof g_dbuf) g_dlen += n;
+        return;
+    }
+    if (!g_dlog) g_dlog = fopen("d3d.log", "w");
+    if (!g_dlog) return;
+    fprintf(g_dlog, "%s\n", line);
     fflush(g_dlog);
+}
+
+static void dlog_flush(void) {
+    if (g_dlog || !g_dlen) return;
+    FILE *f = fopen("d3d.log", "w");
+    if (!f) return;
+    fwrite(g_dbuf, 1, g_dlen, f);
+    fclose(f);
 }
 
 // ---------------------------------------------------------------- matrices (column-major, as GL)
@@ -1811,6 +1830,7 @@ GLF(BOOL, wglMakeCurrent, (HDC dc, HGLRC rc)) {
     if (rc && !dev) {
         HWND w = WindowFromDC(dc);
         if (!create_device(w ? w : g_main)) {
+            dlog_flush();
             MessageBoxA(NULL, "Direct3D 11 could not be initialised (see d3d.log).", "Clusterball", MB_ICONERROR);
             ExitProcess(1);
         }

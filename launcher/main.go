@@ -324,6 +324,7 @@ func main() {
 		launchCB(&cfg, false)
 		return
 	}
+	installDocs(cbExeDir(&cfg)) // Readme, Lizenz, Notice (docs.go)
 	runGUI(&cfg)
 }
 

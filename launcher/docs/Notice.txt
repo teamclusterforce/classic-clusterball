@@ -1,0 +1,42 @@
+Clusterball Re-Enhanced
+Copyright 2026 Team ClusterForce
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Contributors
+  Team ClusterForce - Direct3D 11 renderer, launcher, texture packs,
+                      font and analysis tools
+
+Credit (Apache License, section 4)
+  Whoever passes on this software or a work based on it - whole or in part -
+  must pass this NOTICE file on with it, keep the names above and add their
+  own, and mark the files they changed as changed.
+
+Names and logos (Apache License, section 6)
+  The license grants no right to the names "Clusterball Re-Enhanced",
+  "Team ClusterForce" and "ClusterForce" or to their logos. A modified version
+  must not be published under these names or with these logos, and must not
+  suggest that Team ClusterForce made or endorses it. Saying truthfully that a
+  work is based on Clusterball Re-Enhanced by Team ClusterForce is allowed -
+  and expected. Anything beyond that needs written permission from
+  Team ClusterForce.
+
+ClusterForce music and sounds, not covered by this license
+  The music in launcher/audio/music and the ball sounds in
+  launcher/audio/ball come from the game ClusterForce. They are
+  Copyright 2026 Team ClusterForce, all rights reserved, and may only be passed
+  on as part of an unmodified Clusterball Re-Enhanced launcher.
+
+Material of others, not covered by this license
+  - Clusterball is a product of Daydream Software (2000). The Clusterball
+    emblem and word mark in the launcher's logo and icons, the game
+    screenshots in docs/ and in the launcher, and everything the tools
+    derive from the game's own files belong to the Clusterball rights
+    holders.
+  - The launcher's help texts and its screen overview picture are based on the
+    manual at www.clusterball.de; the clusterball.de logo belongs to
+    clusterball.de.
+  - Michroma font: SIL Open Font License 1.1
+    (assets/cmd/brand/assets/michroma_OFL.txt).
+  - Go modules: BSD-3-Clause or MIT, see the table in README.md; their license
+    texts ship with the modules.

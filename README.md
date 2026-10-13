@@ -118,6 +118,8 @@ All settings live in `clusterball_d3d.ini` next to `Clusterball.exe`; the
 launcher writes it, and the template with every key and its meaning is
 [launcher/layer/clusterball_d3d.ini](launcher/layer/clusterball_d3d.ini).
 An environment variable `CB_<NAME>` overrides a value (e.g. `CB_RES=1920x1080`).
+Log files (`compat.log`, `d3d.log`) are written only with `Log=1`; `d3d.log`
+also when Direct3D 11 cannot start.
 
 ## Repository
 
@@ -178,7 +180,9 @@ Copy `ClusterballCC.exe` into the game folder, next to `Clusterball.exe`, and
 start it. There is nothing to point it to: it always uses the
 `Clusterball.exe` next to itself. Its own configuration is stored there as
 well (`clusterball.ini`; an `xdreamcc.cfg` of earlier versions is taken over
-and removed on the first save).
+and removed on the first save). It also puts a short readme, the license and
+the notice there (`Clusterball Re-Enhanced - Readme.txt`, `- License.txt`,
+`- Notice.txt`), as the license asks for with every copy.
 
 The game folder needs only `Clusterball.exe` (with its `.manifest`),
 `Data.mrg`, `Local.mrg`, `Bass.dll`, `a3d.dll`, `a3dapi.dll`, `config.cfg`

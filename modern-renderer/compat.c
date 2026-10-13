@@ -34,7 +34,21 @@ static BOOL WINAPI my_EnumDisplaySettingsA(LPCSTR dev, DWORD mode, DEVMODEA *dm)
     return ok;
 }
 
+// Log files (compat.log, d3d.log) only on request: Log=1 in clusterball_d3d.ini, CB_LOG, or one of the test modes
+// (CB_SCRIPT, CB_SHOTS). A normal game start leaves no files behind.
+int cfg_str(const char *env, const char *key, char *out, int n);
+int log_enabled(void) {
+    static int on = -1;
+    if (on < 0) {
+        char v[MAX_PATH];
+        on = GetEnvironmentVariableA("CB_SCRIPT", v, sizeof v) || GetEnvironmentVariableA("CB_SHOTS", v, sizeof v) ||
+             (cfg_str("CB_LOG", "Log", v, sizeof v) && atoi(v) != 0);
+    }
+    return on;
+}
+
 void CLOG(const char *fmt, ...) {
+    if (!log_enabled()) return;
     FILE *f = fopen("compat.log", "a");
     if (!f) return;
     va_list a;
@@ -287,7 +301,6 @@ static HMODULE WINAPI my_LoadLibraryA(LPCSTR name) {
 // (clusterball_d3d.ini, relative to the game folder) a file of the same name from there is played instead, when it
 // exists; otherwise the original. DataArchive names a replacement for Data.mrg - the launcher builds one with other
 // ball sounds (Ball1-3.wav) - opened in its place when it exists. The original files are never touched.
-int cfg_str(const char *env, const char *key, char *out, int n);
 static char g_music_dir[MAX_PATH], g_data_archive[MAX_PATH];
 static DWORD(WINAPI *real_BASS_StreamCreateFile)(BOOL, void *, DWORD, DWORD, DWORD);
 static DWORD WINAPI my_BASS_StreamCreateFile(BOOL mem, void *file, DWORD offset, DWORD length, DWORD flags) {
@@ -774,7 +787,7 @@ void input_stats_tick(void) {
 
 void compat_init(void) {
     HMODULE exe = GetModuleHandleA(NULL);
-    { FILE *f = fopen("compat.log", "w"); if (f) fclose(f); }
+    if (log_enabled()) { FILE *f = fopen("compat.log", "w"); if (f) fclose(f); }
     script_load();
     patch_iat(exe, "GDI32.dll", "SwapBuffers", (void *)my_SwapBuffers);
     patch_iat(exe, "GDI32.dll", "GetDeviceCaps", (void *)my_GetDeviceCaps);
