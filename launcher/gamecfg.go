@@ -152,6 +152,7 @@ func readGameSettings(cfg *AppConfig) {
 	cfg.TrilinearMipmap = g.Bool("trilinearmipmap", cfg.TrilinearMipmap)
 	cfg.Force32BitTex = g.Bool("force32BitTexture", cfg.Force32BitTex)
 	cfg.ClampTexture = g.Bool("clamp_texture", cfg.ClampTexture)
+	cfg.InvertAxis = g.Bool("pilot_controls", cfg.InvertAxis)
 	cfg.Bindings = readBindings(g)
 }
 
@@ -188,6 +189,7 @@ func writeGameSettings(cfg *AppConfig) error {
 	g.SetBool("trilinearmipmap", cfg.TrilinearMipmap)
 	g.SetBool("force32BitTexture", cfg.Force32BitTex)
 	g.SetBool("clamp_texture", cfg.ClampTexture)
+	g.SetBool("pilot_controls", cfg.InvertAxis)
 	writeBindings(g, cfg.Bindings)
 
 	return g.Save(path)

@@ -41,6 +41,7 @@ type AppConfig struct {
 	Antialias        bool
 	TrilinearMipmap  bool
 	Force32BitTex    bool
+	InvertAxis       bool // pilot_controls des Spiels ("Tausche vertikale Achse")
 
 	// Direct3D-Schicht – Quelle ist die clusterball_d3d.ini neben der
 	// Clusterball.exe, nicht diese Datei

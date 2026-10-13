@@ -380,7 +380,9 @@ type controlsView struct {
 	hint       *walk.Label
 	presets    [2]*walk.PushButton
 	preset     *walk.Label
-	cardTitles [2]*walk.Label
+	cardTitles [3]*walk.Label
+	lblInvert  *walk.Label
+	chkInvert  *walk.CheckBox
 	ready      bool // erst nach dem Einlesen der Werte speichern
 	fCap       *walk.Font
 	fSmall     *walk.Font
@@ -407,10 +409,16 @@ func (c *controlsView) panel(assign **walk.Composite) Widget {
 	}
 	half := (len(ctrlActions) + 1) / 2
 	mw := c.mw
-	// Die Mausempfindlichkeit gehoert zum Fliegen; sie steht in der
-	// clusterball_d3d.ini und wird wie die Tasten sofort gespeichert.
-	fly := append(rows(0, half), formRow(&mw.t.setMouse, "set.mouse", tr("set.mouseTip"),
-		valueSlider(&mw.sldMouse, &mw.lblMouse, 5, 100, func() { c.saveMouse() })))
+	// Eigene Karte fuer die Maus unter "Fliegen": die Empfindlichkeit steht in
+	// der clusterball_d3d.ini, "Achse tauschen" als pilot_controls in der
+	// config.cfg; beides wird wie die Tasten sofort gespeichert.
+	mouse := []Widget{
+		formRow(&mw.t.setMouse, "set.mouse", tr("set.mouseTip"),
+			valueSlider(&mw.sldMouse, &mw.lblMouse, 5, 100, func() { c.saveMouse() })),
+		formRow(&c.lblInvert, "ctl.invert", tr("ctl.invertTip"),
+			CheckBox{AssignTo: &c.chkInvert, Font: fontForm, ToolTipText: tr("ctl.invertTip"),
+				OnCheckedChanged: func() { c.saveInvert() }}),
+	}
 	return Composite{
 		AssignTo: assign,
 		Visible:  false,
@@ -426,7 +434,8 @@ func (c *controlsView) panel(assign **walk.Composite) Widget {
 			Composite{
 				Layout: HBox{MarginsZero: true, Spacing: gapM, Alignment: AlignHNearVNear},
 				Children: []Widget{
-					formColumn(formCard(&c.cardTitles[0], "ctl.cardFly", fly...)),
+					formColumn(formCard(&c.cardTitles[0], "ctl.cardFly", rows(0, half)...),
+						formCard(&c.cardTitles[2], "ctl.cardMouse", mouse...)),
 					formColumn(formCard(&c.cardTitles[1], "ctl.cardMore", rows(half, len(ctrlActions))...)),
 				},
 			},
@@ -445,6 +454,27 @@ func (c *controlsView) saveMouse() {
 	}
 	c.mw.cfg.D3D.MouseScale = float64(c.mw.sldMouse.Value()) / 100
 	if err := writeD3DSettings(&c.mw.cfg); err != nil {
+		c.mw.setStatus(err.Error())
+	}
+}
+
+// saveInvert schreibt "Achse tauschen" sofort als pilot_controls in die
+// config.cfg - das Spiel zeigt es unter "Tausche vertikale Achse".
+func (c *controlsView) saveInvert() {
+	if !c.ready {
+		return
+	}
+	c.mw.cfg.InvertAxis = c.chkInvert.Checked()
+	path := gameConfigPath(&c.mw.cfg)
+	if path == "" {
+		return
+	}
+	g, err := LoadGameConfig(path)
+	if err == nil {
+		g.SetBool("pilot_controls", c.mw.cfg.InvertAxis)
+		err = g.Save(path)
+	}
+	if err != nil {
 		c.mw.setStatus(err.Error())
 	}
 }
@@ -654,6 +684,10 @@ func (c *controlsView) retranslate() {
 	c.hint.SetText(tr("ctl.hint"))
 	c.cardTitles[0].SetText(tr("ctl.cardFly"))
 	c.cardTitles[1].SetText(tr("ctl.cardMore"))
+	c.cardTitles[2].SetText(tr("ctl.cardMouse"))
+	c.lblInvert.SetText(tr("ctl.invert"))
+	c.lblInvert.SetToolTipText(tr("ctl.invertTip"))
+	c.chkInvert.SetToolTipText(tr("ctl.invertTip"))
 	c.invalidateAll()
 }
 

@@ -1263,6 +1263,7 @@ func (mw *AppWindow) showD3D(d D3DSettings) {
 	mw.cmbBall.SetCurrentIndex(indexOfStr(ballSoundValues, d.BallSound))
 	mw.sldMouse.SetValue(clampInt(int(d.MouseScale*100+0.5), 5, 100))
 	mw.lblMouse.SetText(fmt.Sprintf("%d", mw.sldMouse.Value()))
+	mw.controls.chkInvert.SetChecked(mw.cfg.InvertAxis)
 }
 
 func clampInt(v, lo, hi int) int {
