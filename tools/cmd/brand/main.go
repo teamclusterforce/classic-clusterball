@@ -72,7 +72,29 @@ var marks = []mark{
 	}},
 }
 
+// Menu entries (256 x 32): white extended capitals with a dark shadow, the highlighted state with a frame.
+// The upscaled originals carry the stray dark pixels around the letters as crumbs, so they are drawn anew in
+// Michroma, a Microgramma-style face like the original, fitted to the original's text and frame.
+var words = []struct {
+	hash, text string
+	box        bool
+}{
+	{"2b5ce9a49ffc878c", "TRAINING", false}, {"f033c5e15bfdb262", "TRAINING", true},
+	{"5f2be42dd2342509", "SPIEL HOSTEN", false}, {"525a6be054738692", "SPIEL HOSTEN", true},
+	{"d3baaa70129e1cde", "SPIEL BEITRETEN", false}, {"2de230a21dcba43e", "SPIEL BEITRETEN", true},
+	{"ad978b78be68d2b7", "GESP. SPIELE", false}, {"8d8939667fa656c7", "GESP. SPIELE", true},
+	{"65340e195a1d52de", "SETUP", false}, {"b3c75defb141093d", "SETUP", true},
+	{"cc84efceb8afd6eb", "ENDE", false}, {"2a50ae57051ad87b", "ENDE", true},
+	{"b98fbe17a4976b76", "WELT VERLASSEN", true},
+	{"afbb605c3655fc09", "HOST MATCH", false}, {"1919830190985dd1", "HOST MATCH", true},
+	{"ea70eb058d11dde2", "JOIN MATCH", false}, {"fb24d0e9daa4f982", "JOIN MATCH", true},
+	{"775414207255d1eb", "VIEW MATCH", false}, {"0efc5d189d5605e4", "VIEW MATCH", true},
+	{"93c60949da33854b", "QUIT", false}, {"fbb440496162b5e3", "QUIT", true},
+	{"a948f06ed0814d16", "LEAVE VENUE", true},
+}
+
 var face *opentype.Font
+var gameDir string
 
 func main() {
 	game := flag.String("game", "", "game folder")
@@ -84,6 +106,11 @@ func main() {
 	var err error
 	if face, err = opentype.Parse(michromaTTF); err != nil {
 		panic(err)
+	}
+	gameDir = *game
+	for _, w := range words {
+		w := w
+		marks = append(marks, mark{w.hash, 256, 32, false, func(c *canvas) { c.word(w.hash, w.text, w.box) }})
 	}
 	tex := filepath.Join(*game, "textures")
 	for _, pack := range []string{"up", "up16"} {
@@ -153,6 +180,84 @@ func (c *canvas) put(mask *image.Alpha, x0, y0 int, col color.NRGBA) {
 			p.A = uint8(math.Max(float64(p.A), a*255))
 			c.img.SetNRGBA(cx, cy, p)
 		}
+	}
+}
+
+// word draws a menu entry anew: white text with a dark shadow over exactly the area the original's text covers,
+// and for the highlighted state the 1-pixel frame around it. Geometry is measured on the original texture
+// (textures\dump), whose stray dark pixels are left out.
+func (c *canvas) word(hash, text string, box bool) {
+	orig, err := loadNRGBA(filepath.Join(gameDir, "textures", "dump", hash+".png"))
+	if err != nil {
+		fmt.Println("no original for", hash+":", err)
+		return
+	}
+	brightBox := func(r image.Rectangle) image.Rectangle {
+		out := image.Rectangle{}
+		for y := r.Min.Y; y < r.Max.Y; y++ {
+			for x := r.Min.X; x < r.Max.X; x++ {
+				p := orig.NRGBAAt(x, y)
+				if p.A > 128 && p.R > 180 && p.G > 180 && p.B > 180 {
+					out = out.Union(image.Rect(x, y, x+1, y+1))
+				}
+			}
+		}
+		return out
+	}
+	all := brightBox(orig.Bounds())
+	textR := all
+	if box {
+		textR = brightBox(all.Inset(3))
+	}
+	if textR.Empty() {
+		fmt.Println("no text found in", hash)
+		return
+	}
+	W, H := orig.Bounds().Dx(), orig.Bounds().Dy()
+	c.clear(0, 0, float64(W), float64(H))
+
+	// text mask at about the target cap height, emboldened, cropped to its ink, then fitted to textR
+	fc, _ := opentype.NewFace(face, &opentype.FaceOptions{Size: c.fontSize(text, float64(textR.Dy()), 1e9), DPI: 72, Hinting: font.HintingNone})
+	defer fc.Close()
+	r := 0.45 * c.k
+	pad := int(math.Ceil(r)) + 2
+	m := fc.Metrics()
+	asc, desc := m.Ascent.Ceil(), m.Descent.Ceil()
+	mask := image.NewAlpha(image.Rect(0, 0, int(math.Ceil(float64(font.MeasureString(fc, text))/64))+2*pad, asc+desc+2*pad))
+	d := font.Drawer{Dst: mask, Src: image.Opaque, Face: fc, Dot: fixed.P(pad, pad+asc)}
+	d.DrawString(text)
+	mask = dilateMask(mask, r)
+	ink := image.Rectangle{}
+	for y := 0; y < mask.Bounds().Dy(); y++ {
+		for x := 0; x < mask.Bounds().Dx(); x++ {
+			if mask.AlphaAt(x, y).A > 0 {
+				ink = ink.Union(image.Rect(x, y, x+1, y+1))
+			}
+		}
+	}
+	tw, th := int(math.Round(float64(textR.Dx())*c.k)), int(math.Round(float64(textR.Dy())*c.k))
+	fitted := image.NewAlpha(image.Rect(0, 0, tw, th))
+	draw.CatmullRom.Scale(fitted, fitted.Bounds(), mask, ink, draw.Src, nil)
+	x0, y0 := int(math.Round(float64(textR.Min.X)*c.k)), int(math.Round(float64(textR.Min.Y)*c.k))
+	off := int(math.Round(c.k)) // shadow one original pixel down and right, like the original
+	c.put(fitted, x0+off, y0+off, color.NRGBA{40, 40, 40, 255})
+	c.put(fitted, x0, y0, color.NRGBA{255, 255, 255, 255})
+
+	if box {
+		t := int(math.Max(1, math.Round(c.k))) // frame: one original pixel wide
+		fx0, fy0 := int(math.Round(float64(all.Min.X)*c.k)), int(math.Round(float64(all.Min.Y)*c.k))
+		fx1, fy1 := int(math.Round(float64(all.Max.X)*c.k)), int(math.Round(float64(all.Max.Y)*c.k))
+		edge := func(x0, y0, x1, y1 int) {
+			m := image.NewAlpha(image.Rect(0, 0, x1-x0, y1-y0))
+			for i := range m.Pix {
+				m.Pix[i] = 255
+			}
+			c.put(m, x0, y0, color.NRGBA{255, 255, 255, 255})
+		}
+		edge(fx0, fy0, fx1, fy0+t)
+		edge(fx0, fy1-t, fx1, fy1)
+		edge(fx0, fy0, fx0+t, fy1)
+		edge(fx1-t, fy0, fx1, fy1)
 	}
 }
 
