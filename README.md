@@ -240,8 +240,10 @@ of this repository. The scripts in [assets/](assets/) build them:
 4. `assets\brand_pack.ps1 -GameDir <game folder>` adds the Clusterball
    Re-Enhanced and Team ClusterForce marks to the menu header, the menu bar
    and the loading box and redraws the menu words and the game menu's tab
-   labels sharp (`assets\cmd\brand`, with the Michroma font under the
-   SIL Open Font License).
+   labels sharp. It also replaces the "Company" billboards in the arenas
+   (old ads of real companies) with a ClusterForce board, a clusterball.de
+   board and five memes (`assets\cmd\brand`, with the Michroma and Anton
+   fonts under the SIL Open Font License).
 
 `assets\build_scaled_pack.ps1 -GameDir <game folder> -List <hashes.txt>
 -Factor 8 -Cap 2048 -Name hd8` builds a pack for a list of textures at another

@@ -38,5 +38,10 @@ Material of others, not covered by this license
     clusterball.de.
   - Michroma font: SIL Open Font License 1.1
     (assets/cmd/brand/assets/michroma_OFL.txt).
+  - Anton font: SIL Open Font License 1.1
+    (assets/cmd/brand/assets/anton_OFL.txt).
+  - The meme pictures on the arena billboards (assets/cmd/brand/assets/memes:
+    Distracted Boyfriend, This Is Fine, Doge, Always Has Been, Evil Kermit)
+    belong to their authors and rights holders; they are used as parody.
   - Go modules: BSD-3-Clause or MIT, see the table in README.md; their license
     texts ship with the modules.

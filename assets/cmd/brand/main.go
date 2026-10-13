@@ -3,6 +3,8 @@
 // <game>\textures\brand\up and brand\up16; assets\brand_pack.ps1 compresses those into the hd/hd16 packs.
 // The sources stay untouched, so the tool can run again after the packs were rebuilt.
 //
+// Also replaces the arenas' billboards (ads.go); -adpreview draws them alone.
+//
 // Marks (positions in the game's own pixels, measured on the original textures):
 //   - "RE-ENHANCED" to the right of the Clusterball logo on the menu header (right header tile)
 //   - the ClusterForce emblem and "TEAM CLUSTERFORCE" on the left of the yellow menu bar
@@ -121,14 +123,19 @@ var gameDir string
 
 func main() {
 	game := flag.String("game", "", "game folder")
+	preview := flag.String("adpreview", "", "only draw the seven billboards into this PNG")
 	flag.Parse()
-	if *game == "" {
-		fmt.Fprintln(os.Stderr, "usage: brand -game <game folder>")
-		os.Exit(2)
-	}
 	var err error
 	if face, err = opentype.Parse(michromaTTF); err != nil {
 		panic(err)
+	}
+	if *preview != "" {
+		adPreview(*preview)
+		return
+	}
+	if *game == "" {
+		fmt.Fprintln(os.Stderr, "usage: brand -game <game folder> | brand -adpreview <file.png>")
+		os.Exit(2)
 	}
 	gameDir = *game
 	for _, w := range words {
@@ -161,6 +168,7 @@ func main() {
 			fmt.Println("branded", pack, m.hash)
 		}
 	}
+	drawAds(*game)
 }
 
 func loadNRGBA(path string) (*image.NRGBA, error) {
