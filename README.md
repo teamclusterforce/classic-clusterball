@@ -127,7 +127,8 @@ of this repository. The scripts in [tools/](tools/) build them:
    photos (`tools\cmd\pickmodel`).
 4. `tools\brand_pack.ps1 -GameDir <game folder>` adds the Clusterball
    Re-Enhanced and Team ClusterForce marks to the menu header, the menu bar
-   and the loading box (`tools\cmd\brand`, with the Michroma font under the
+   and the loading box and redraws the menu words and the game menu's tab
+   labels sharp (`tools\cmd\brand`, with the Michroma font under the
    SIL Open Font License).
 
 Third-party programs go into `tools\bin` (not in the repository):

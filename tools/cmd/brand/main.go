@@ -93,6 +93,24 @@ var words = []struct {
 	{"a948f06ed0814d16", "LEAVE VENUE", true},
 }
 
+// Tabs (84 x 24, stored bottom-up): the upscaled tab shape stays, only its label is drawn anew - colour and
+// place come from the original (black on the active tab, grey on the others).
+var tabs = []struct{ hash, text string }{
+	{"012586b84024e3e8", "PILOTEN"}, {"d90f9d5f1d963f15", "PILOTEN"},
+	{"084c36dc52f0d86c", "SPIELER"}, {"80a344dd61f1ffbf", "SPIELER"},
+	{"2a252065229017e3", "LAN"}, {"15047d8f6c56f255", "LAN"},
+	{"321edda91ac24a1d", "SYSTEM"}, {"3905cf74fa6aeff8", "SYSTEM"},
+	{"35c915fa656ed5e0", "SETUP"}, {"ee1b714458f87d5b", "SETUP"},
+	{"f9b559b57182a053", "CONTROLS"}, {"389203e31f99bb02", "CONTROLS"},
+	{"40ccbbc985b80a59", "OPTIONEN"}, {"a2e50406863b3c3a", "OPTIONEN"},
+	{"4c1c7f675128dab5", "STEUERUNG"}, {"42b3f0eb8697ce48", "STEUERUNG"},
+	{"43e7e1d0356de7d0", "INTERNET"}, {"b8df12dc78920845", "INTERNET"},
+	{"595a9268b446a44f", "PLAYER"}, {"7a12f6778d33c848", "PLAYER"},
+	{"e7c127a1ab25b37d", "OPTIONS"}, {"6eeb9b1e84325ad9", "OPTIONS"},
+	{"da942a9faec3fd2a", "CHAT"}, {"7f354ae72dc54c16", "CHAT"},
+	{"cd99686c678d2965", "FLYERS"}, {"dc1a9e023031deb4", "FLYERS"},
+}
+
 var face *opentype.Font
 var gameDir string
 
@@ -111,6 +129,10 @@ func main() {
 	for _, w := range words {
 		w := w
 		marks = append(marks, mark{w.hash, 256, 32, false, func(c *canvas) { c.word(w.hash, w.text, w.box) }})
+	}
+	for _, t := range tabs {
+		t := t
+		marks = append(marks, mark{t.hash, 84, 24, true, func(c *canvas) { c.tabLabel(t.hash, t.text) }})
 	}
 	tex := filepath.Join(*game, "textures")
 	for _, pack := range []string{"up", "up16"} {
@@ -216,28 +238,7 @@ func (c *canvas) word(hash, text string, box bool) {
 	W, H := orig.Bounds().Dx(), orig.Bounds().Dy()
 	c.clear(0, 0, float64(W), float64(H))
 
-	// text mask at about the target cap height, emboldened, cropped to its ink, then fitted to textR
-	fc, _ := opentype.NewFace(face, &opentype.FaceOptions{Size: c.fontSize(text, float64(textR.Dy()), 1e9), DPI: 72, Hinting: font.HintingNone})
-	defer fc.Close()
-	r := 0.45 * c.k
-	pad := int(math.Ceil(r)) + 2
-	m := fc.Metrics()
-	asc, desc := m.Ascent.Ceil(), m.Descent.Ceil()
-	mask := image.NewAlpha(image.Rect(0, 0, int(math.Ceil(float64(font.MeasureString(fc, text))/64))+2*pad, asc+desc+2*pad))
-	d := font.Drawer{Dst: mask, Src: image.Opaque, Face: fc, Dot: fixed.P(pad, pad+asc)}
-	d.DrawString(text)
-	mask = dilateMask(mask, r)
-	ink := image.Rectangle{}
-	for y := 0; y < mask.Bounds().Dy(); y++ {
-		for x := 0; x < mask.Bounds().Dx(); x++ {
-			if mask.AlphaAt(x, y).A > 0 {
-				ink = ink.Union(image.Rect(x, y, x+1, y+1))
-			}
-		}
-	}
-	tw, th := int(math.Round(float64(textR.Dx())*c.k)), int(math.Round(float64(textR.Dy())*c.k))
-	fitted := image.NewAlpha(image.Rect(0, 0, tw, th))
-	draw.CatmullRom.Scale(fitted, fitted.Bounds(), mask, ink, draw.Src, nil)
+	fitted := c.fittedText(text, textR, 0.45)
 	x0, y0 := int(math.Round(float64(textR.Min.X)*c.k)), int(math.Round(float64(textR.Min.Y)*c.k))
 	off := int(math.Round(c.k)) // shadow one original pixel down and right, like the original
 	c.put(fitted, x0+off, y0+off, color.NRGBA{40, 40, 40, 255})
@@ -259,6 +260,118 @@ func (c *canvas) word(hash, text string, box bool) {
 		edge(fx0, fy0, fx0+t, fy1)
 		edge(fx1-t, fy0, fx1, fy1)
 	}
+}
+
+// fittedText renders text emboldened by bold (original's pixels per side), crops it to its ink and scales it to
+// exactly the rectangle r (original's pixels): the coverage mask in canvas pixels.
+func (c *canvas) fittedText(text string, r image.Rectangle, bold float64) *image.Alpha {
+	fc, _ := opentype.NewFace(face, &opentype.FaceOptions{Size: c.fontSize(text, float64(r.Dy()), 1e9), DPI: 72, Hinting: font.HintingNone})
+	defer fc.Close()
+	br := bold * c.k
+	pad := int(math.Ceil(br)) + 2
+	m := fc.Metrics()
+	asc, desc := m.Ascent.Ceil(), m.Descent.Ceil()
+	mask := image.NewAlpha(image.Rect(0, 0, int(math.Ceil(float64(font.MeasureString(fc, text))/64))+2*pad, asc+desc+2*pad))
+	d := font.Drawer{Dst: mask, Src: image.Opaque, Face: fc, Dot: fixed.P(pad, pad+asc)}
+	d.DrawString(text)
+	mask = dilateMask(mask, br)
+	ink := image.Rectangle{}
+	for y := 0; y < mask.Bounds().Dy(); y++ {
+		for x := 0; x < mask.Bounds().Dx(); x++ {
+			if mask.AlphaAt(x, y).A > 0 {
+				ink = ink.Union(image.Rect(x, y, x+1, y+1))
+			}
+		}
+	}
+	tw, th := int(math.Round(float64(r.Dx())*c.k)), int(math.Round(float64(r.Dy())*c.k))
+	fitted := image.NewAlpha(image.Rect(0, 0, tw, th))
+	draw.CatmullRom.Scale(fitted, fitted.Bounds(), mask, ink, draw.Src, nil)
+	return fitted
+}
+
+// tabLabel replaces the label of a tab: the area of the original's dark text (inside the tab's outline) is filled
+// with the tab's colour from the upscale and the text drawn anew in the original's text colour.
+func (c *canvas) tabLabel(hash, text string) {
+	orig, err := loadNRGBA(filepath.Join(gameDir, "textures", "dump", hash+".png"))
+	if err != nil {
+		fmt.Println("no original for", hash+":", err)
+		return
+	}
+	H := orig.Bounds().Dy()
+	at := func(x, y int) color.NRGBA { // y counted from the top as the player sees it
+		return orig.NRGBAAt(x, H-1-y)
+	}
+	lum := func(p color.NRGBA) int { return (int(p.R)*299 + int(p.G)*587 + int(p.B)*114) / 1000 }
+	grey := func(p color.NRGBA) bool {
+		return max(p.R, p.G, p.B)-min(p.R, p.G, p.B) < 40
+	}
+	// The tab's face: the bright grey area (the purple frame and the dark bar under inactive tabs lie outside).
+	tab := image.Rectangle{}
+	for y := 0; y < H; y++ {
+		for x := 0; x < orig.Bounds().Dx(); x++ {
+			if p := at(x, y); p.A > 128 && grey(p) && lum(p) > 200 {
+				tab = tab.Union(image.Rect(x, y, x+1, y+1))
+			}
+		}
+	}
+	// The label: dark grey pixels between the first and the last bright pixel of each row (the tab's outline lies
+	// outside), leaving out the dark bar that runs across the whole width.
+	dark := func(p color.NRGBA) bool { return p.A > 128 && grey(p) && lum(p) < 170 }
+	bright := func(p color.NRGBA) bool { return p.A > 128 && grey(p) && lum(p) > 200 }
+	textR, darkest := image.Rectangle{}, 255
+	for y := tab.Min.Y; y < tab.Max.Y; y++ {
+		x0, x1, n := -1, -1, 0
+		for x := tab.Min.X; x < tab.Max.X; x++ {
+			p := at(x, y)
+			if dark(p) {
+				n++
+			}
+			if bright(p) {
+				if x0 < 0 {
+					x0 = x
+				}
+				x1 = x
+			}
+		}
+		if x0 < 0 || n > tab.Dx()*7/10 {
+			continue
+		}
+		for x := x0 + 1; x < x1; x++ {
+			if p := at(x, y); dark(p) {
+				textR = textR.Union(image.Rect(x, y, x+1, y+1))
+				darkest = min(darkest, lum(p))
+			}
+		}
+	}
+	if textR.Empty() {
+		fmt.Println("no label found in", hash)
+		return
+	}
+	// Text colour: mean of the darkest label pixels; background: the upscale left of the label.
+	var sr, sg, sb, n int
+	for y := textR.Min.Y; y < textR.Max.Y; y++ {
+		for x := textR.Min.X; x < textR.Max.X; x++ {
+			if p := at(x, y); p.A > 128 && lum(p) <= darkest+40 {
+				sr += int(p.R)
+				sg += int(p.G)
+				sb += int(p.B)
+				n++
+			}
+		}
+	}
+	ink := color.NRGBA{uint8(sr / n), uint8(sg / n), uint8(sb / n), 255}
+	cy := int((float64(textR.Min.Y+textR.Max.Y) / 2) * c.k)
+	bgx := int(float64(textR.Min.X-2) * c.k)
+	CH := c.img.Bounds().Dy()
+	bg := c.img.NRGBAAt(bgx, CH-1-cy)
+	bg.A = 255
+	cover := textR.Inset(-1)
+	fill := image.NewAlpha(image.Rect(0, 0, int(float64(cover.Dx())*c.k), int(float64(cover.Dy())*c.k)))
+	for i := range fill.Pix {
+		fill.Pix[i] = 255
+	}
+	c.put(fill, int(float64(cover.Min.X)*c.k), int(float64(cover.Min.Y)*c.k), bg)
+	c.put(c.fittedText(text, textR, 0.45), int(float64(textR.Min.X)*c.k), int(float64(textR.Min.Y)*c.k), ink)
 }
 
 // clear makes a rectangle of the original's pixels (y from the top) transparent.

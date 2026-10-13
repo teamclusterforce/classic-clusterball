@@ -858,8 +858,10 @@ static ID3D11ShaderResourceView *tex_srv(Tex *t) {
             if (ew == 1 && eh == 1) break;
         }
         t->replaced = 0;
-        // "community / www.clusterball.de - mod by xdgn" (Data.mrg pictures/3): shown on exit until Esc.
-        t->exit_picture = w0 == 640 && h0 == 480 && tex_hash(t) == 0xf7911a4c00622664ull;
+        // "community / www.clusterball.de - mod by xdgn": shown on exit until Esc (1024 x 512; the start splash
+        // is the same picture at 640 x 480).
+        t->exit_picture = (w0 == 1024 && h0 == 512 && tex_hash(t) == 0x289cff2b7dab154cull) ||
+                          (w0 == 640 && h0 == 480 && tex_hash(t) == 0xf7911a4c00622664ull);
         if ((g_tex_dump || g_tex_replace) && w0 >= 8 && h0 >= 8 && !t->dynamic) {
             unsigned long long hash = tex_hash(t);
             if (g_tex_dump) {
