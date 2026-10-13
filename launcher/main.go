@@ -26,8 +26,13 @@ import (
 	xdraw "golang.org/x/image/draw"
 )
 
+// Beide aus assets/cmd/launcherlogo.
+//
 //go:embed logo_cb.png
 var logoPNG []byte
+
+//go:embed logo_cf.png
+var logoCFPNG []byte
 
 const (
 	appTitle   = "Clusterball Re-Enhanced"
@@ -50,14 +55,18 @@ const (
 // Feste Hoehen der Kopfbereiche. Beide Composites werden auf exakt diese
 // Hoehe genagelt, damit der Inhalt beim Tab-Wechsel nicht springt.
 const (
-	headerHeight = 76
-	tabBarHeight = 40
+	headerHeight = 80
+	tabBarHeight = 38
 )
 
-// Logische Breite des Logos (1170 x 240 px aus assets/cmd/launcherlogo,
-// damit 50 px hoch). Die PNG-Datei ist absichtlich viel groesser - sie wird
-// als High-DPI-Asset eingebunden (siehe loadLogo).
-const logoWidth = 244
+// Logische Hoehe der Logos in der Kopfleiste. Die PNG-Dateien sind 240 px
+// hoch - sie werden als High-DPI-Assets eingebunden (siehe loadLogo).
+const (
+	logoHeight   = 56
+	logoCFHeight = 40
+)
+
+const siteURL = "http://www.clusterball.de"
 
 // Farbtiefe des Bildspeichers. Unter der Direct3D-Schicht nimmt das Spiel den
 // OpenGL-Pfad, und dort findet es unter aktuellem Windows nur Modi mit 32 Bit -
@@ -77,8 +86,6 @@ const (
 const fontFamily = "Segoe UI"
 
 var (
-	fontTitle    = Font{Family: fontFamily, PointSize: 14, Bold: true}
-	fontSubtitle = Font{Family: fontFamily, PointSize: 8}
 	fontCTA      = Font{Family: fontFamily, PointSize: 12, Bold: true}
 	fontHeading  = Font{Family: fontFamily, PointSize: 9, Bold: true}
 	fontBody     = Font{Family: fontFamily, PointSize: 9}
@@ -157,12 +164,20 @@ type texts struct {
 	accHint     *walk.Label
 	btnRegister *walk.PushButton
 
-	btnStart     *walk.PushButton
+	btnStart     *walk.CustomWidget
 	btnDedicated *walk.PushButton
-	gbOwnIP      *walk.GroupBox
+	setOwnIP     *walk.Label
 	btnDetectIP  *walk.PushButton
 
 	lblTableHint *walk.Label
+	emptyTitle   *walk.Label
+	emptyHint    *walk.Label
+	gfxTitle     *walk.Label
+	gfxLink      *walk.LinkLabel
+
+	setPreset   *walk.Label
+	btnPresets  [4]*walk.PushButton
+	btnDefaults *walk.PushButton
 
 	setGraphics   *walk.Label
 	setDisplay    *walk.Label
@@ -184,7 +199,6 @@ type texts struct {
 	btnSave       *walk.PushButton
 
 	sbBrand *walk.StatusBarItem
-	sbForce *walk.StatusBarItem
 }
 
 type AppWindow struct {
@@ -196,12 +210,15 @@ type AppWindow struct {
 	panelSpiel         *walk.Composite
 	panelEinstellungen *walk.Composite
 
-	// Tab-Buttons
-	btnTabSpiel         *walk.PushButton
-	btnTabEinstellungen *walk.PushButton
-	btnTabHilfe         *walk.PushButton
-	fontTabActive       *walk.Font
-	fontTabInactive     *walk.Font
+	// Reiter (ui.go) und Schriften der selbst gezeichneten Teile
+	tabs            []*tabItem
+	fontTabActive   *walk.Font
+	fontTabInactive *walk.Font
+	fontCTA         *walk.Font
+
+	imgCF         *walk.ImageView // Team ClusterForce, verlinkt
+	emptyState    *walk.Composite // statt der Tabelle, solange kein Server online ist
+	lblGfxSummary *walk.Label     // Grafik-Kurzuebersicht im Spiel-Reiter
 
 	// Account (oben in Spiel-Tab)
 	editAccount     *walk.LineEdit
@@ -246,7 +263,6 @@ type AppWindow struct {
 	lblMouse      *walk.Label
 
 	lblStatus *walk.StatusBarItem
-	lblClock  *walk.StatusBarItem
 
 	t texts
 
@@ -291,7 +307,7 @@ func runGUI(cfg *AppConfig) {
 	mw.Run()
 }
 
-// loadLogo bindet das Logo als High-DPI-Bitmap ein: logisch logoWidth breit,
+// loadLogo bindet ein Logo als High-DPI-Bitmap ein: logisch height hoch,
 // gezeichnet aber aus der vollen PNG-Aufloesung.
 //
 // Der Umweg ueber die DPI-Angabe ist kein Selbstzweck. Ein ImageView ist in
@@ -307,18 +323,18 @@ func runGUI(cfg *AppConfig) {
 // uebernimmt nicht Windows beim Zeichnen (ohne Glaettung, das Logo wurde
 // pixelig), sondern loadLogo vorab mit einem Catmull-Rom-Filter, genau auf
 // die Pixelgroesse fuer die DPI des Bildschirms.
-func loadLogo() *walk.Bitmap {
-	img, err := png.Decode(bytes.NewReader(logoPNG))
+func loadLogo(data []byte, height int) *walk.Bitmap {
+	img, err := png.Decode(bytes.NewReader(data))
 	if err != nil {
 		return nil
 	}
 	b := img.Bounds()
-	if b.Dx() <= 0 {
+	if b.Dy() <= 0 {
 		return nil
 	}
 	dpi := screenDPI()
-	tw := int(math.Round(float64(logoWidth) * float64(dpi) / 96))
-	th := int(math.Round(float64(tw) * float64(b.Dy()) / float64(b.Dx())))
+	th := int(math.Round(float64(height) * float64(dpi) / 96))
+	tw := int(math.Round(float64(th) * float64(b.Dx()) / float64(b.Dy())))
 	small := image.NewRGBA(image.Rect(0, 0, tw, th))
 	xdraw.CatmullRom.Scale(small, small.Bounds(), img, b, xdraw.Src, nil)
 	bmp, err := walk.NewBitmapFromImageForDPI(small, dpi)
@@ -339,14 +355,23 @@ func screenDPI() int {
 }
 
 func (mw *AppWindow) build() error {
-	logoBitmap := loadLogo()
+	logoBitmap := loadLogo(logoPNG, logoHeight)
+	logoCF := loadLogo(logoCFPNG, logoCFHeight)
 
 	mw.hostModel = NewHostListModel()
 
-	// Aktiver/inaktiver Tab: gleiche Groesse, nur Bold wechselt, damit die
+	// Aktiver/inaktiver Reiter: gleiche Groesse, nur Bold wechselt, damit die
 	// Leiste beim Umschalten ruhig bleibt.
-	mw.fontTabActive, _ = walk.NewFont(fontFamily, 9, walk.FontBold)
-	mw.fontTabInactive, _ = walk.NewFont(fontFamily, 9, 0)
+	mw.fontTabActive, _ = walk.NewFont(fontFamily, 10, walk.FontBold)
+	mw.fontTabInactive, _ = walk.NewFont(fontFamily, 10, 0)
+	mw.fontCTA, _ = walk.NewFont(fontFamily, 13, walk.FontBold)
+	mw.tabs = []*tabItem{
+		{key: "tab.game", active: func() bool { return mw.activeTab == tabSpiel }, onClick: func() { mw.showTab(tabSpiel) }},
+		{key: "tab.settings", active: func() bool { return mw.activeTab == tabEinstellungen },
+			onClick: func() { mw.showTab(tabEinstellungen) }},
+		// Kein Reiter, sondern ein Link auf die Support-Seite.
+		{key: "tab.help", active: func() bool { return false }, onClick: func() { openURL(supportURL) }},
+	}
 
 	err := MainWindow{
 		AssignTo: &mw.MainWindow,
@@ -359,22 +384,27 @@ func (mw *AppWindow) build() error {
 		// Summe der Breiten muss unter die Fensterbreite passen, sonst wird
 		// das letzte Feld abgeschnitten.
 		StatusBarItems: []StatusBarItem{
-			{AssignTo: &mw.lblStatus, Text: tr("st.ready"), Width: 385},
-			{AssignTo: &mw.lblClock, Text: "", Width: 125},
-			{AssignTo: &mw.t.sbBrand, Text: tr("sb.brand"), Width: 105},
-			{AssignTo: &mw.t.sbForce, Text: tr("sb.force"), Width: 115,
-				ToolTipText: forceURL,
-				OnClicked:   func() { openURL(forceURL) }},
+			{AssignTo: &mw.lblStatus, Text: tr("st.ready"), Width: 520},
+			{Text: "v" + appVersion, Width: 70},
+			{AssignTo: &mw.t.sbBrand, Text: tr("sb.brand"), Width: 150,
+				ToolTipText: siteURL,
+				OnClicked:   func() { openURL(siteURL) }},
 		},
 		Children: []Widget{
-			mw.headerBar(logoBitmap),
+			mw.headerBar(logoBitmap, logoCF),
 			mw.tabBar(),
 
 			// Gemeinsamer Container fuer beide Panels: er ist das einzige
 			// dehnbare Kind des Root-Layouts, also bleiben Header und
 			// Tab-Leiste beim Umschalten exakt an ihrem Platz.
+			// Die selbst gezeichneten Reiter melden walk immer "will wachsen"
+			// (CustomWidget ist greedy). Damit die Reiterleiste davon keinen
+			// Anteil am freien Platz bekommt - walk verteilt den an ihrer
+			// MaxSize abgeschnittenen Rest sonst als Luecken -, geht er nach
+			// Gewicht fast ganz an diesen Container.
 			Composite{
-				Layout: VBox{MarginsZero: true, SpacingZero: true},
+				StretchFactor: 10000,
+				Layout:        VBox{MarginsZero: true, SpacingZero: true},
 				Children: []Widget{
 					mw.spielPanel(),
 					mw.einstellungenPanel(),
@@ -391,6 +421,14 @@ func (mw *AppWindow) build() error {
 	// Manifest (1) die ID 2.
 	if ic, err := walk.NewIconFromResourceId(2); err == nil {
 		mw.MainWindow.SetIcon(ic)
+	}
+	// Klickbare Teile zeigen die Hand.
+	for _, t := range mw.tabs {
+		t.w.SetCursor(walk.CursorHand())
+	}
+	mw.t.btnStart.SetCursor(walk.CursorHand())
+	if mw.imgCF != nil {
+		mw.imgCF.SetCursor(walk.CursorHand())
 	}
 
 	// Hintergrund-Goroutinen sauber beenden statt auf ein zerstoertes
@@ -414,81 +452,46 @@ func (mw *AppWindow) build() error {
 	}
 
 	mw.refreshHostList()
-	go mw.updateClock()
 	go mw.autoRefreshHosts()
 	return nil
 }
 
 // ── Kopfbereich ───────────────────────────────────────────────────────────────
 
-func (mw *AppWindow) headerBar(logo *walk.Bitmap) Widget {
+// Kopfleiste: links das Clusterball-Logo (mit "RE-ENHANCED" darunter, wie im
+// Spiel), rechts Team ClusterForce mit Link.
+func (mw *AppWindow) headerBar(logo, logoCF *walk.Bitmap) Widget {
 	return Composite{
 		MinSize:    Size{Height: headerHeight},
 		MaxSize:    Size{Height: headerHeight},
-		Background: SolidColorBrush{Color: walk.RGB(22, 32, 48)},
-		Layout:     HBox{Margins: Margins{Left: gutter, Top: 8, Right: gutter, Bottom: 8}},
+		Background: SolidColorBrush{Color: colHeader},
+		Layout:     HBox{Margins: Margins{Left: gutter, Top: 10, Right: gutter + 4, Bottom: 10}},
 		Children: []Widget{
 			// Ideal-Modus: feste Groesse, nicht dehnbar - siehe loadLogo.
-			ImageView{
-				Image: logo,
-				Mode:  ImageViewModeIdeal,
-			},
+			ImageView{Image: logo, Mode: ImageViewModeIdeal},
 			HSpacer{},
-			Composite{
-				Layout: VBox{MarginsZero: true, SpacingZero: true},
-				Children: []Widget{
-					// Neben dem Clusterball-Logo ergibt das den Namen
-					// "Clusterball Re-Enhanced".
-					Label{
-						Text:      "Re-Enhanced",
-						TextColor: walk.RGB(255, 200, 0),
-						Font:      fontTitle,
-					},
-					Label{
-						Text:      "Command Center · v" + appVersion + " · clusterball.de",
-						TextColor: walk.RGB(130, 160, 200),
-						Font:      fontSubtitle,
-					},
-				},
+			ImageView{
+				AssignTo:    &mw.imgCF,
+				Image:       logoCF,
+				Mode:        ImageViewModeIdeal,
+				ToolTipText: forceURL,
+				OnMouseUp:   func(x, y int, b walk.MouseButton) { openURL(forceURL) },
 			},
 		},
 	}
 }
 
+// Reiterleiste: flache Reiter, der aktive weiss mit gelber Unterlinie.
 func (mw *AppWindow) tabBar() Widget {
 	return Composite{
 		MinSize:    Size{Height: tabBarHeight},
 		MaxSize:    Size{Height: tabBarHeight},
-		Background: SolidColorBrush{Color: walk.RGB(245, 246, 248)},
-		Layout:     HBox{Margins: Margins{Left: gutter, Top: 4, Right: gutter, Bottom: 4}, Spacing: gapS},
+		Background: SolidColorBrush{Color: colTabBar},
+		Layout:     HBox{Margins: Margins{Left: gutter - 6}, SpacingZero: true},
 		Children: []Widget{
-			PushButton{
-				AssignTo:  &mw.btnTabSpiel,
-				Text:      tr("tab.game"),
-				Font:      fontBodyBold,
-				MinSize:   Size{Width: 130, Height: 30},
-				MaxSize:   Size{Width: 130, Height: 30},
-				OnClicked: func() { mw.showTab(tabSpiel) },
-			},
-			PushButton{
-				AssignTo:  &mw.btnTabEinstellungen,
-				Text:      tr("tab.settings"),
-				Font:      fontBody,
-				MinSize:   Size{Width: 150, Height: 30},
-				MaxSize:   Size{Width: 150, Height: 30},
-				OnClicked: func() { mw.showTab(tabEinstellungen) },
-			},
-			// Kein Tab, sondern ein Link: oeffnet die Support-Seite im
-			// Browser und nimmt deshalb nicht am Fontwechsel von showTab teil.
-			PushButton{
-				AssignTo:    &mw.btnTabHilfe,
-				Text:        tr("tab.help"),
-				Font:        fontBody,
-				MinSize:     Size{Width: 100, Height: 30},
-				MaxSize:     Size{Width: 100, Height: 30},
-				ToolTipText: supportURL,
-				OnClicked:   func() { openURL(supportURL) },
-			},
+			mw.tabWidget(mw.tabs[0], 110),
+			mw.tabWidget(mw.tabs[1], 140),
+			mw.tabWidget(mw.tabs[2], 90),
 			HSpacer{},
 		},
 	}
@@ -520,32 +523,29 @@ func (mw *AppWindow) spielPanel() Widget {
 
 func (mw *AppWindow) accountRow() Widget {
 	return Composite{
-		Background: SolidColorBrush{Color: walk.RGB(235, 240, 250)},
-		Layout:     HBox{Margins: Margins{Left: gapM, Top: gapS, Right: gapM, Bottom: gapS}, Spacing: gapS},
+		Background: SolidColorBrush{Color: colAccountBar},
+		Layout:     HBox{Margins: Margins{Left: gapM, Top: 8, Right: gapM + 2, Bottom: 8}, Spacing: gapS},
 		Children: []Widget{
-			Label{
-				Text:      "\U0001f464",
-				Font:      fontHeading,
-				TextColor: walk.RGB(60, 100, 180),
-			},
 			Label{AssignTo: &mw.t.accPlayer, Text: tr("acc.player"), Font: fontBodyBold},
 			LineEdit{
-				AssignTo:  &mw.editAccount,
-				Text:      mw.cfg.AccountName,
-				Font:      fontBody,
-				MinSize:   Size{Width: 150},
-				MaxSize:   Size{Width: 150},
-				CueBanner: tr("acc.playerCue"),
+				AssignTo:      &mw.editAccount,
+				Text:          mw.cfg.AccountName,
+				Font:          fontBody,
+				MinSize:       Size{Width: 150},
+				MaxSize:       Size{Width: 150},
+				CueBanner:     tr("acc.playerCue"),
+				OnTextChanged: func() { mw.updateAccountState() },
 			},
 			Label{AssignTo: &mw.t.accPassword, Text: tr("acc.password"), Font: fontBodyBold},
 			LineEdit{
-				AssignTo:     &mw.editAccPassword,
-				Text:         mw.cfg.AccountPassword,
-				Font:         fontBody,
-				MinSize:      Size{Width: 130},
-				MaxSize:      Size{Width: 130},
-				PasswordMode: true,
-				CueBanner:    tr("acc.passwordCue"),
+				AssignTo:      &mw.editAccPassword,
+				Text:          mw.cfg.AccountPassword,
+				Font:          fontBody,
+				MinSize:       Size{Width: 130},
+				MaxSize:       Size{Width: 130},
+				PasswordMode:  true,
+				CueBanner:     tr("acc.passwordCue"),
+				OnTextChanged: func() { mw.updateAccountState() },
 			},
 			// Feste Breiten oben sorgen dafuer, dass der Button hier links
 			// stehen bleibt statt von wachsenden Feldern an den Rand
@@ -560,30 +560,38 @@ func (mw *AppWindow) accountRow() Widget {
 				OnClicked:   func() { openURL(registerURL) },
 			},
 			HSpacer{},
-			Label{
-				AssignTo:  &mw.t.accHint,
-				Text:      tr("acc.hint"),
-				Font:      fontHint,
-				TextColor: walk.RGB(120, 125, 135),
-			},
+			// "● Nur LAN-Spiele" / "● Online-Konto", siehe updateAccountState.
+			Label{AssignTo: &mw.t.accHint, Text: tr("acc.lan"), Font: fontBodyBold, TextColor: colMuted},
 		},
 	}
 }
 
+// updateAccountState zeigt, ob mit den eingetragenen Daten online gespielt
+// werden kann (Name und Passwort) oder nur im LAN.
+func (mw *AppWindow) updateAccountState() {
+	if mw.t.accHint == nil || mw.editAccount == nil || mw.editAccPassword == nil {
+		return
+	}
+	if strings.TrimSpace(mw.editAccount.Text()) != "" && mw.editAccPassword.Text() != "" {
+		mw.t.accHint.SetText(tr("acc.online"))
+		mw.t.accHint.SetTextColor(colOK)
+	} else {
+		mw.t.accHint.SetText(tr("acc.lan"))
+		mw.t.accHint.SetTextColor(colMuted)
+	}
+}
+
 func (mw *AppWindow) actionColumn() Widget {
+	// Starten ist das, was fast jeder will: der grosse gelbe Knopf. Einen
+	// Server hosten steht als zweiter Knopf darunter; die eigene IP dafuer
+	// liegt in den Einstellungen unter Netzwerk.
 	return Composite{
-		MinSize: Size{Width: 175},
-		MaxSize: Size{Width: 175},
+		MinSize: Size{Width: 190},
+		MaxSize: Size{Width: 190},
 		Layout:  VBox{MarginsZero: true, Spacing: gapS},
 		Children: []Widget{
-			PushButton{
-				AssignTo:  &mw.t.btnStart,
-				Text:      tr("act.start"),
-				Font:      fontCTA,
-				MinSize:   Size{Height: 46},
-				MaxSize:   Size{Height: 46},
-				OnClicked: func() { mw.startGame() },
-			},
+			VSpacer{Size: 28}, // auf Hoehe der Tabelle neben der Ueberschrift
+			mw.ctaButton(&mw.t.btnStart, "act.start", 58, func() { mw.startGame() }),
 			PushButton{
 				AssignTo:  &mw.t.btnDedicated,
 				Text:      tr("act.dedicated"),
@@ -592,48 +600,59 @@ func (mw *AppWindow) actionColumn() Widget {
 				MaxSize:   Size{Height: 32},
 				OnClicked: func() { mw.startDedicated() },
 			},
-			VSpacer{Size: gapS},
-			// Nur noch die eigene Adresse. Ein Feld fuer die Host-IP gab es
-			// hier frueher auch - der Master-Server liest die Host-Adresse
-			// aber ohnehin aus dem Absender des UDP-Heartbeats, das Feld war
-			// also wirkungslos.
-			GroupBox{
-				AssignTo: &mw.t.gbOwnIP,
-				Title:    tr("act.ownIP"),
-				Font:     fontBody,
-				Layout:   VBox{Margins: Margins{Left: gapS, Top: gapS, Right: gapS, Bottom: gapS}, Spacing: gapS},
+			VSpacer{Size: gapM},
+			// Kurzuebersicht der Grafik, mit Sprung in die Einstellungen.
+			Composite{
+				MinSize:    Size{Width: 190},
+				Background: SolidColorBrush{Color: colAccountBar},
+				Layout:     VBox{Margins: Margins{Left: gapM, Top: 8, Right: gapM, Bottom: 8}, Spacing: 2, Alignment: AlignHNearVNear},
 				Children: []Widget{
+					// HSpacer: macht den Kasten so breit wie die Spalte.
 					Composite{
 						Layout: HBox{MarginsZero: true, SpacingZero: true},
 						Children: []Widget{
-							LineEdit{AssignTo: &mw.editOwnIP, Text: mw.cfg.OwnIP, Font: fontBody},
-							PushButton{
-								AssignTo:    &mw.t.btnDetectIP,
-								Text:        "↻",
-								Font:        fontBody,
-								MinSize:     Size{Width: 24, Height: 22},
-								MaxSize:     Size{Width: 24, Height: 22},
-								ToolTipText: tr("act.detectTip"),
-								OnClicked:   func() { mw.detectExternalIP() },
-							},
+							Label{AssignTo: &mw.t.gfxTitle, Text: tr("sum.title"), Font: fontBodyBold},
+							HSpacer{},
 						},
 					},
-					CheckBox{
-						AssignTo: &mw.chkExternalIP,
-						Text:     tr("act.external"),
-						Font:     fontBody,
-						OnClicked: func() {
-							mw.cfg.UseExternalIP = mw.chkExternalIP.Checked()
-							if mw.chkExternalIP.Checked() {
-								mw.detectExternalIP()
-							}
-						},
+					Label{AssignTo: &mw.lblGfxSummary, Text: "", Font: fontBody, TextColor: walk.RGB(70, 78, 92)},
+					LinkLabel{
+						AssignTo:        &mw.t.gfxLink,
+						Text:            `<a id="s">` + tr("sum.change") + `</a>`,
+						Font:            fontBody,
+						OnLinkActivated: func(*walk.LinkLabelLink) { mw.showTab(tabEinstellungen) },
 					},
 				},
 			},
 			VSpacer{},
 		},
 	}
+}
+
+// updateGfxSummary fasst die Grafikeinstellungen fuer den Spiel-Reiter
+// zusammen: Anzeige und Aufloesung, Kantenglaettung, Texturen.
+func (mw *AppWindow) updateGfxSummary() {
+	if mw.lblGfxSummary == nil {
+		return
+	}
+	d := mw.cfg.D3D
+	disp := tr("set.fullscreen")
+	if !d.Fullscreen {
+		disp = tr("set.window")
+	}
+	res := resLabels([]string{d.Resolution})[0]
+	aa := tr("set.off")
+	if d.MSAA > 1 {
+		aa = fmt.Sprintf("%d×", d.MSAA)
+	}
+	if d.SuperSample > 1 {
+		aa += fmt.Sprintf(" + SS %d×", d.SuperSample)
+	}
+	tex := tr("set.texOrig")
+	if d.TexturePack != "" {
+		tex = tr("set.texHD4")
+	}
+	mw.lblGfxSummary.SetText(fmt.Sprintf(tr("sum.text"), disp, res, aa, tex))
 }
 
 func (mw *AppWindow) serverList() Widget {
@@ -663,22 +682,38 @@ func (mw *AppWindow) serverList() Widget {
 			TableView{
 				AssignTo: &mw.hostListView,
 				Font:     fontBody,
+				Visible:  false, // bis Server da sind, steht dort emptyState
 				Columns: []TableViewColumn{
-					{Title: tr("srv.colName"), Width: 190},
-					{Title: tr("srv.colPlayers"), Width: 60},
-					{Title: tr("srv.colMap"), Width: 105},
-					{Title: tr("srv.colType"), Width: 75},
+					{Title: tr("srv.colName"), Width: 210},
+					{Title: tr("srv.colPlayers"), Width: 64},
+					{Title: tr("srv.colMap"), Width: 120},
+					{Title: tr("srv.colType"), Width: 80},
 				},
 				LastColumnStretched: true,
 				AlternatingRowBG:    true,
 				Model:               mw.hostModel,
 				OnItemActivated:     func() { mw.joinSelectedServer() },
 			},
+			// Leere Liste: statt einer weissen Tabelle ohne Zeilen ein Hinweis,
+			// was man jetzt tun kann.
+			Composite{
+				AssignTo:   &mw.emptyState,
+				Background: SolidColorBrush{Color: walk.RGB(255, 255, 255)},
+				Layout:     VBox{Margins: Margins{Left: 24, Top: 24, Right: 24, Bottom: 24}, Spacing: gapS},
+				Children: []Widget{
+					VSpacer{},
+					Label{AssignTo: &mw.t.emptyTitle, Text: tr("srv.emptyTitle"), Font: fontCTA,
+						TextColor: walk.RGB(60, 70, 90), TextAlignment: AlignCenter},
+					Label{AssignTo: &mw.t.emptyHint, Text: tr("srv.emptyHint"), Font: fontBody,
+						TextColor: colMuted, TextAlignment: AlignCenter},
+					VSpacer{},
+				},
+			},
 			Label{
 				AssignTo:  &mw.t.lblTableHint,
 				Text:      tr("srv.hint"),
 				Font:      fontHint,
-				TextColor: walk.RGB(120, 125, 135),
+				TextColor: colMuted,
 			},
 		},
 	}
@@ -728,8 +763,19 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 		Visible:  false,
 		Layout:   VBox{Margins: Margins{Left: gutter, Top: 12, Right: gutter, Bottom: 10}, Spacing: gapM},
 		Children: []Widget{
+			// Voreinstellungen fuer die Grafik: setzen Kantenglaettung,
+			// Supersampling, Filterung und Umgebungsverdeckung auf einmal.
 			Composite{
-				Layout: HBox{MarginsZero: true, Spacing: 24},
+				Background: SolidColorBrush{Color: colAccountBar},
+				Layout:     HBox{Margins: Margins{Left: gapM, Top: 8, Right: gapM, Bottom: 8}, Spacing: gapS},
+				Children: []Widget{
+					Label{AssignTo: &mw.t.setPreset, Text: tr("set.preset"), Font: fontBodyBold},
+					mw.presetButton(0), mw.presetButton(1), mw.presetButton(2), mw.presetButton(3),
+					HSpacer{},
+				},
+			},
+			Composite{
+				Layout: HBox{MarginsZero: true, Spacing: 24, Alignment: AlignHNearVNear},
 				Children: []Widget{
 
 					// Linke Spalte: Direct3D-Schicht. HNear, sonst zentriert walk
@@ -803,6 +849,39 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 									Label{AssignTo: &mw.t.setMaster, Text: tr("set.master"), Font: fontBody},
 									LineEdit{AssignTo: &mw.editServerIP, Text: mw.cfg.ServerIP, Font: fontBody,
 										MinSize: Size{Width: 150}, MaxSize: Size{Width: 150}},
+									// Eigene IP fuer den Dedicated Host. Ein Feld fuer die
+									// Host-IP gibt es nicht: der Master-Server liest die
+									// Adresse aus dem Absender des UDP-Heartbeats.
+									Label{AssignTo: &mw.t.setOwnIP, Text: tr("act.ownIP"), Font: fontBody},
+									Composite{
+										Layout: HBox{MarginsZero: true, SpacingZero: true},
+										Children: []Widget{
+											LineEdit{AssignTo: &mw.editOwnIP, Text: mw.cfg.OwnIP, Font: fontBody,
+												MinSize: Size{Width: 126}, MaxSize: Size{Width: 126}},
+											PushButton{
+												AssignTo:    &mw.t.btnDetectIP,
+												Text:        "↻",
+												Font:        fontBody,
+												MinSize:     Size{Width: 24, Height: 22},
+												MaxSize:     Size{Width: 24, Height: 22},
+												ToolTipText: tr("act.detectTip"),
+												OnClicked:   func() { mw.detectExternalIP() },
+											},
+											HSpacer{},
+										},
+									},
+									Label{},
+									CheckBox{
+										AssignTo: &mw.chkExternalIP,
+										Text:     tr("act.external"),
+										Font:     fontBody,
+										OnClicked: func() {
+											mw.cfg.UseExternalIP = mw.chkExternalIP.Checked()
+											if mw.chkExternalIP.Checked() {
+												mw.detectExternalIP()
+											}
+										},
+									},
 								},
 							},
 							VSpacer{Size: gapS},
@@ -830,6 +909,14 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 				Layout: HBox{MarginsZero: true, Spacing: gapS},
 				Children: []Widget{
 					HSpacer{},
+					PushButton{
+						AssignTo:  &mw.t.btnDefaults,
+						Text:      tr("set.defaults"),
+						Font:      fontBody,
+						MinSize:   Size{Width: 170, Height: 32},
+						MaxSize:   Size{Width: 170, Height: 32},
+						OnClicked: func() { mw.restoreDefaults() },
+					},
 					// Der Pfad gehoert in den Tooltip: als Label wuerde seine
 					// Textbreite dem ganzen Fenster die Mindestbreite diktieren.
 					PushButton{
@@ -845,6 +932,49 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 			},
 		},
 	}
+}
+
+// Grafik-Voreinstellungen: Kantenglaettung, Supersampling, anisotrope
+// Filterung, Umgebungsverdeckung. Aufloesung, Anzeige und Texturen bleiben.
+var graphicsPresets = []struct {
+	key             string
+	msaa, ss, aniso int
+	ao              bool
+}{
+	{"set.pLow", 1, 1, 4, false},
+	{"set.pMid", 4, 1, 8, false},
+	{"set.pHigh", 8, 1, 16, true},
+	{"set.pMax", 8, 2, 16, true},
+}
+
+func (mw *AppWindow) presetButton(i int) Widget {
+	return PushButton{
+		AssignTo:  &mw.t.btnPresets[i],
+		Text:      tr(graphicsPresets[i].key),
+		Font:      fontBody,
+		MinSize:   Size{Width: 92, Height: 26},
+		MaxSize:   Size{Width: 92, Height: 26},
+		OnClicked: func() { mw.applyPreset(i) },
+	}
+}
+
+// applyPreset stellt die Auswahllisten ein; gespeichert wird wie sonst auch
+// erst mit "Einstellungen speichern" (oder beim Spielstart).
+func (mw *AppWindow) applyPreset(i int) {
+	p := graphicsPresets[i]
+	mw.cmbMSAA.SetCurrentIndex(indexOfInt(msaaValues, p.msaa))
+	mw.cmbSS.SetCurrentIndex(indexOfInt(ssValues, p.ss))
+	mw.cmbAniso.SetCurrentIndex(indexOfInt(anisoValues, p.aniso))
+	mw.chkAO.SetChecked(p.ao)
+	mw.setStatus(fmt.Sprintf(tr("st.preset"), tr(p.key)))
+}
+
+// restoreDefaults setzt die Grafikeinstellungen auf die Vorgaben zurueck.
+func (mw *AppWindow) restoreDefaults() {
+	mw.showD3D(defaultD3D)
+	mw.sldBrightness.SetValue(clampInt(defaultD3D.Gamma, 50, 150))
+	mw.lblBrightness.SetText(fmt.Sprintf("%d", mw.sldBrightness.Value()))
+	mw.setStatus(tr("st.defaults"))
 }
 
 // ── Sprache ───────────────────────────────────────────────────────────────────
@@ -873,27 +1003,37 @@ func (mw *AppWindow) retranslate() {
 	mw.SetSuspended(true)
 	defer mw.SetSuspended(false)
 
-	mw.btnTabSpiel.SetText(tr("tab.game"))
-	mw.btnTabEinstellungen.SetText(tr("tab.settings"))
-	mw.btnTabHilfe.SetText(tr("tab.help"))
+	for _, t := range mw.tabs {
+		t.w.Invalidate() // die Reiter holen ihren Text beim Zeichnen
+	}
 
 	mw.t.accPlayer.SetText(tr("acc.player"))
 	mw.t.accPassword.SetText(tr("acc.password"))
-	mw.t.accHint.SetText(tr("acc.hint"))
+	mw.updateAccountState()
+	mw.updateGfxSummary()
 	mw.t.btnRegister.SetText(tr("acc.register"))
 	mw.t.btnRegister.SetToolTipText(tr("acc.registerTip"))
 	mw.editAccount.SetCueBanner(tr("acc.playerCue"))
 	mw.editAccPassword.SetCueBanner(tr("acc.passwordCue"))
 
-	mw.t.btnStart.SetText(tr("act.start"))
+	mw.t.btnStart.Invalidate()
 	mw.t.btnDedicated.SetText(tr("act.dedicated"))
-	mw.t.gbOwnIP.SetTitle(tr("act.ownIP"))
+	mw.t.setOwnIP.SetText(tr("act.ownIP"))
 	mw.t.btnDetectIP.SetToolTipText(tr("act.detectTip"))
 	mw.chkExternalIP.SetText(tr("act.external"))
 
 	mw.btnRefresh.SetText(tr("srv.refresh"))
 	mw.t.lblTableHint.SetText(tr("srv.hint"))
+	mw.t.emptyHint.SetText(tr("srv.emptyHint"))
 	mw.updateServerLabel()
+
+	mw.t.setPreset.SetText(tr("set.preset"))
+	for i, b := range mw.t.btnPresets {
+		b.SetText(tr(graphicsPresets[i].key))
+	}
+	mw.t.btnDefaults.SetText(tr("set.defaults"))
+	mw.t.gfxTitle.SetText(tr("sum.title"))
+	mw.t.gfxLink.SetText(`<a id="s">` + tr("sum.change") + `</a>`)
 
 	cols := mw.hostListView.Columns()
 	titles := []string{tr("srv.colName"), tr("srv.colPlayers"), tr("srv.colMap"), tr("srv.colType")}
@@ -953,7 +1093,6 @@ func (mw *AppWindow) retranslate() {
 	mw.t.btnSave.SetToolTipText(fmt.Sprintf(tr("set.saveTip"), configPath()))
 
 	mw.t.sbBrand.SetText(tr("sb.brand"))
-	mw.t.sbForce.SetText(tr("sb.force"))
 	mw.updateServerStatus()
 }
 
@@ -962,6 +1101,16 @@ func (mw *AppWindow) retranslate() {
 func (mw *AppWindow) updateServerLabel() {
 	if mw.lblServers == nil {
 		return
+	}
+	// Ohne Server steht statt der leeren Tabelle der Hinweis.
+	if mw.emptyState != nil {
+		mw.emptyState.SetVisible(mw.lastHosts <= 0)
+		mw.hostListView.SetVisible(mw.lastHosts > 0)
+		if mw.lastHosts < 0 {
+			mw.t.emptyTitle.SetText(tr("srv.loadingTitle"))
+		} else {
+			mw.t.emptyTitle.SetText(tr("srv.emptyTitle"))
+		}
 	}
 	switch {
 	case mw.lastHosts < 0:
@@ -1000,15 +1149,8 @@ func (mw *AppWindow) showTab(tab int) {
 
 	mw.panelSpiel.SetVisible(tab == tabSpiel)
 	mw.panelEinstellungen.SetVisible(tab == tabEinstellungen)
-
-	if mw.fontTabActive != nil && mw.fontTabInactive != nil {
-		if tab == tabSpiel {
-			mw.btnTabSpiel.SetFont(mw.fontTabActive)
-			mw.btnTabEinstellungen.SetFont(mw.fontTabInactive)
-		} else {
-			mw.btnTabSpiel.SetFont(mw.fontTabInactive)
-			mw.btnTabEinstellungen.SetFont(mw.fontTabActive)
-		}
+	for _, t := range mw.tabs {
+		t.w.Invalidate()
 	}
 }
 
@@ -1033,28 +1175,8 @@ func (mw *AppWindow) applyConfig() {
 		}
 	}
 
-	// Direct3D-Schicht
 	if mw.cmbDisplay != nil {
-		d := mw.cfg.D3D
-		mw.cmbDisplay.SetCurrentIndex(indexOfBool(displayValues, d.Fullscreen))
-		// Eine von Hand eingetragene Auflösung bleibt auswählbar.
-		mw.resChoices = append([]string(nil), resValues...)
-		if indexOfStr(mw.resChoices, d.Resolution) == 0 && d.Resolution != "" {
-			mw.resChoices = append(mw.resChoices, d.Resolution)
-		}
-		mw.cmbRes.SetModel(resLabels(mw.resChoices))
-		mw.cmbRes.SetCurrentIndex(indexOfStr(mw.resChoices, d.Resolution))
-		mw.cmbMSAA.SetCurrentIndex(indexOfInt(msaaValues, d.MSAA))
-		mw.cmbSS.SetCurrentIndex(indexOfInt(ssValues, d.SuperSample))
-		mw.cmbAniso.SetCurrentIndex(indexOfInt(anisoValues, d.Anisotropy))
-		mw.cmbTexPack.SetCurrentIndex(indexOfStr(packValues, d.TexturePack))
-		mw.sldSharpen.SetValue(clampInt(d.Sharpen, 0, 100))
-		mw.lblSharpen.SetText(fmt.Sprintf("%d", mw.sldSharpen.Value()))
-		mw.chkVSync.SetChecked(d.VSync)
-		mw.chkFont.SetChecked(d.FontReplace)
-		mw.chkAO.SetChecked(d.AmbientOcc)
-		mw.sldMouse.SetValue(clampInt(int(d.MouseScale*100+0.5), 5, 100))
-		mw.lblMouse.SetText(fmt.Sprintf("%d", mw.sldMouse.Value()))
+		mw.showD3D(mw.cfg.D3D)
 	}
 
 	// Spiel
@@ -1063,6 +1185,31 @@ func (mw *AppWindow) applyConfig() {
 		mw.sldBrightness.SetValue(clampInt(mw.cfg.D3D.Gamma, 50, 150))
 		mw.lblBrightness.SetText(fmt.Sprintf("%d", mw.sldBrightness.Value()))
 	}
+	mw.updateAccountState()
+	mw.updateGfxSummary()
+}
+
+// showD3D stellt die Auswahllisten der Direct3D-Schicht auf d.
+func (mw *AppWindow) showD3D(d D3DSettings) {
+	mw.cmbDisplay.SetCurrentIndex(indexOfBool(displayValues, d.Fullscreen))
+	// Eine von Hand eingetragene Auflösung bleibt auswählbar.
+	mw.resChoices = append([]string(nil), resValues...)
+	if indexOfStr(mw.resChoices, d.Resolution) == 0 && d.Resolution != "" {
+		mw.resChoices = append(mw.resChoices, d.Resolution)
+	}
+	mw.cmbRes.SetModel(resLabels(mw.resChoices))
+	mw.cmbRes.SetCurrentIndex(indexOfStr(mw.resChoices, d.Resolution))
+	mw.cmbMSAA.SetCurrentIndex(indexOfInt(msaaValues, d.MSAA))
+	mw.cmbSS.SetCurrentIndex(indexOfInt(ssValues, d.SuperSample))
+	mw.cmbAniso.SetCurrentIndex(indexOfInt(anisoValues, d.Anisotropy))
+	mw.cmbTexPack.SetCurrentIndex(indexOfStr(packValues, d.TexturePack))
+	mw.sldSharpen.SetValue(clampInt(d.Sharpen, 0, 100))
+	mw.lblSharpen.SetText(fmt.Sprintf("%d", mw.sldSharpen.Value()))
+	mw.chkVSync.SetChecked(d.VSync)
+	mw.chkFont.SetChecked(d.FontReplace)
+	mw.chkAO.SetChecked(d.AmbientOcc)
+	mw.sldMouse.SetValue(clampInt(int(d.MouseScale*100+0.5), 5, 100))
+	mw.lblMouse.SetText(fmt.Sprintf("%d", mw.sldMouse.Value()))
 }
 
 func clampInt(v, lo, hi int) int {
@@ -1304,29 +1451,6 @@ func (mw *AppWindow) autoRefreshHosts() {
 			return
 		case <-ticker.C:
 			mw.sync(func() { mw.refreshHostList() })
-		}
-	}
-}
-
-// updateClock schreibt in ein eigenes Statusleisten-Feld. Frueher lief das
-// auf demselben Feld wie die Statusmeldungen und hat jede Meldung nach
-// spaetestens einer Sekunde wieder ueberschrieben.
-func (mw *AppWindow) updateClock() {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-mw.done:
-			return
-		case now := <-ticker.C:
-			secs := now.Hour()*3600 + now.Minute()*60 + now.Second()
-			beats := float64(secs) / 86.4
-			txt := fmt.Sprintf("%s · @%06.2f", now.Format("02.01.06"), beats)
-			mw.sync(func() {
-				if mw.lblClock != nil {
-					mw.lblClock.SetText(txt)
-				}
-			})
 		}
 	}
 }
