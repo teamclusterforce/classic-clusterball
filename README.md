@@ -1,17 +1,61 @@
 # Clusterball Re-Enhanced
 
-Tools and infrastructure to make the game Clusterball (Daydream Software, 2000)
-playable again on modern systems - sharp, in the monitor's native resolution -
-and online via [clusterball.de](http://www.clusterball.de). At its heart is a
-native Direct3D 11 renderer written for this game.
+Clusterball (Daydream Software, 2000) is a fast sport in the air: you fly a
+glider through a landscape, collect coloured balls into a chain behind you and
+fly that chain through the ring in the arena - while up to seven other pilots
+try to shoot it apart or steal it. The game still has a loyal community at
+[clusterball.de](https://www.clusterball.de), but on today's PCs it barely
+runs any more.
 
-![Main menu in 4K](docs/main-menu.jpg)
+**Clusterball Re-Enhanced** makes it playable again - without changing the
+game:
 
-All game screenshots on this page are unscaled frames from the renderer at
-3840 × 2160 with the highest settings (8× MSAA, 2× supersampling, 16×
-anisotropic filtering, ambient occlusion, 16× texture pack), saved as JPEG at
-quality 95; the before/after crops are lossless PNG. Click one to see it at
-full size.
+- sharp at your monitor's native resolution, up to 4K, with smooth edges and
+  high-resolution textures
+- crisp menu and HUD text
+- a new launcher with the server list, graphics settings, key bindings
+  (WASD + mouse, mouse wheel) and the game's manual built in, in English and
+  German
+- online play via clusterball.de
+
+Gameplay, flight model, weapons and worlds stay exactly as they were.
+
+Made by Team ClusterForce, who are also working on
+[ClusterForce](https://store.steampowered.com/app/5063650/), a spiritual
+successor to Clusterball.
+
+## Screenshots
+
+### The launcher
+
+| Play | Settings |
+| ---- | -------- |
+| ![Launcher: server list and game start](docs/launcher-play.png) | ![Launcher: graphics settings](docs/launcher-settings.png) |
+
+### The game
+
+![Main menu](docs/main-menu.jpg)
+
+![Bora Bora](docs/flight-bora-bora.jpg)
+
+![Antarctica](docs/flight-antarctica.jpg)
+
+All game screenshots on this page are unscaled frames at 3840 × 2160 with the
+highest settings, saved as JPEG at quality 95. Click one to see it at full
+size.
+
+## Getting started
+
+Put `ClusterballCC.exe` into your Clusterball folder, next to
+`Clusterball.exe`, and start it. It sets everything else up when you start the
+game; the details are under [Installation](#installation).
+
+---
+
+## Under the hood
+
+The rest of this page is for those who want to know how it works or build it
+themselves.
 
 ## A native Direct3D 11 renderer
 
@@ -62,27 +106,14 @@ Because it sits exactly where the game draws, it does what a wrapper cannot:
 
 "Before" is the same game at the same size with the texture pack, the font
 replacement, anti-aliasing and post-processing switched off - the way the
-original renders.
+original renders. The screenshots use the highest settings: 8× MSAA, 2×
+supersampling, 16× anisotropic filtering, ambient occlusion and the 16×
+texture pack; the before/after crops are lossless PNG.
 
 All settings live in `clusterball_d3d.ini` next to `Clusterball.exe`; the
 launcher writes it, and the template with every key and its meaning is
 [launcher/layer/clusterball_d3d.ini](launcher/layer/clusterball_d3d.ini).
 An environment variable `CB_<NAME>` overrides a value (e.g. `CB_RES=1920x1080`).
-
-## Screenshots
-
-### Menus
-
-| | |
-| - | - |
-| ![Training: venue and line-up](docs/training.jpg) | ![Host a game](docs/host.jpg) |
-| ![Setup: options](docs/setup-options.jpg) | ![Setup: system, with the renderer and resolution in use](docs/setup-system.jpg) |
-
-### In the game
-
-![Bora Bora](docs/flight-bora-bora.jpg)
-
-![Antarctica](docs/flight-antarctica.jpg)
 
 ## Repository
 
@@ -104,11 +135,8 @@ the development tools:
 The launcher replaces the outdated XDream Command Center (XDreamCC) that
 originally shipped with the game. XDreamCC relies on XDream services that
 were shut down long ago; the Command Center takes over all of its duties and
-replaces the old `XDreamCC.ini`.
-
-| Game | Settings |
-| ---- | -------- |
-| ![Command Center, Game tab](docs/launcher-game.png) | ![Command Center, Settings tab](docs/launcher-settings.png) |
+replaces the old `XDreamCC.ini`. Screenshots are at the
+[top of this page](#the-launcher).
 
 ### Features
 
