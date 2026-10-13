@@ -113,7 +113,9 @@ replaces the old `XDreamCC.ini`.
   and join on double-click
 - Game launch that carries account credentials and settings into the game's
   `config.cfg` and prepares the game folder: installs the renderer, writes
-  its settings, generates the sharp font and removes the old Glide files
+  its settings, generates the sharp font and removes the old Glide files;
+  `Clusterball.exe` gets the Re-Enhanced icon (only its icon resources
+  change, checked against the original before the file is replaced)
 - Dedicated host launch including the UDP heartbeat that registers the host
   with the master server (protocol reconstructed via reverse engineering)
 - Graphics settings: fullscreen or window, resolution, anti-aliasing,

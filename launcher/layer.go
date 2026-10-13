@@ -43,8 +43,9 @@ func installLayer(gameDir string) error {
 }
 
 // prepareGame bringt das Spielverzeichnis vor dem Start auf Stand: Schicht,
-// ihre Einstellungen und der Schrift-Ersatz. Fehler beim Schrift-Ersatz sind
-// nicht fatal - das Spiel nutzt dann seine eigene Schrift.
+// ihre Einstellungen, das Icon von Clusterball.exe und der Schrift-Ersatz.
+// Fehler bei Icon und Schrift-Ersatz sind nicht fatal - das Spiel behält
+// dann sein altes Icon bzw. nutzt seine eigene Schrift.
 func prepareGame(cfg *AppConfig) (fontErr, err error) {
 	dir := cbExeDir(cfg)
 	if dir == "" {
@@ -53,6 +54,7 @@ func prepareGame(cfg *AppConfig) (fontErr, err error) {
 	if err := installLayer(dir); err != nil {
 		return nil, err
 	}
+	ensureGameIcon(cfg.CBExePath)
 	if err := writeD3DSettings(cfg); err != nil {
 		return nil, err
 	}
