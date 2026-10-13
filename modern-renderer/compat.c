@@ -819,11 +819,26 @@ static void cursor_to_game_arrow(void) {
     SetCursorPos(p.x, p.y);
 }
 
+// The game hides the system cursor itself (ShowCursor(FALSE), SetCursor(NULL)). With the native mouse both are
+// taken over: the game's ShowCursor count is only kept for it, the real one stays visible, and the cursor shape is
+// the arrow in the menus and none in flight (WM_SETCURSOR in sub_proc, native_mouse_mode).
+static int g_game_show_count;
+static int WINAPI my_ShowCursor(BOOL show) {
+    if (!g_native_mouse) return ShowCursor(show);
+    g_game_show_count += show ? 1 : -1;
+    return g_game_show_count;
+}
+static HCURSOR WINAPI my_SetCursor(HCURSOR c) {
+    if (g_menu_native) return SetCursor(LoadCursorA(NULL, IDC_ARROW));
+    return SetCursor(c);
+}
+
 static void native_mouse_mode(void) {
     int menu = g_native_mouse && g_main && g_cursor_seen && GetTickCount() - g_cursor_seen < 250;
     if (menu == g_menu_native) return;
     g_menu_native = menu;
     g_hide_game_cursor = menu && !g_script_mode; // test shots keep the game's arrow
+    if (menu) for (int i = 0; i < 64 && ShowCursor(TRUE) < 0; i++) {} // undo a ShowCursor(FALSE) from before the hook
     if (menu && !g_script_mode && GetForegroundWindow() == g_main) cursor_to_game_arrow();
     update_clip(g_main);
     POINT p;
@@ -979,6 +994,8 @@ void compat_init(void) {
         patch_iat(exe, "USER32.dll", "MoveWindow", (void *)my_MoveWindow);
         patch_iat(exe, "USER32.dll", "GetSystemMetrics", (void *)my_GetSystemMetrics);
         patch_iat(exe, "USER32.dll", "SetCursorPos", (void *)my_SetCursorPos);
+        patch_iat(exe, "USER32.dll", "ShowCursor", (void *)my_ShowCursor);
+        patch_iat(exe, "USER32.dll", "SetCursor", (void *)my_SetCursor);
         patch_iat(exe, "USER32.dll", "CloseWindow", (void *)my_CloseWindow);
         patch_iat(exe, "USER32.dll", "GetClientRect", (void *)my_GetClientRect);
         patch_iat(exe, "USER32.dll", "ShowWindow", (void *)my_ShowWindow);
