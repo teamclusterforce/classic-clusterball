@@ -53,6 +53,7 @@ const (
 	tabSpiel         = 0
 	tabEinstellungen = 1
 	tabHilfe         = 2
+	tabUeber         = 3
 )
 
 // Feste Hoehen der Kopfbereiche. Beide Composites werden auf exakt diese
@@ -215,7 +216,9 @@ type AppWindow struct {
 	panelSpiel         *walk.Composite
 	panelEinstellungen *walk.Composite
 	panelHilfe         *walk.Composite
+	panelUeber         *walk.Composite
 	help               *helpView
+	about              *helpView // Reiter "Über", gleiche Darstellung ohne Kapitelleiste
 
 	// Reiter (ui.go) und Schriften der selbst gezeichneten Teile
 	tabs            []*tabItem
@@ -365,7 +368,8 @@ func (mw *AppWindow) build() error {
 	logoCBDE := loadLogo(logoCBDEPNG, logoCBDEHeight)
 
 	mw.hostModel = NewHostListModel()
-	mw.help = newHelpView(mw)
+	mw.help = newHelpView(mw, helpDE, helpEN, true)
+	mw.about = newHelpView(mw, aboutDE, aboutEN, false)
 
 	// Aktiver/inaktiver Reiter: gleiche Groesse, nur Bold wechselt, damit die
 	// Leiste beim Umschalten ruhig bleibt.
@@ -378,6 +382,7 @@ func (mw *AppWindow) build() error {
 			onClick: func() { mw.showTab(tabEinstellungen) }},
 		// Das Handbuch im Launcher, siehe help.go.
 		{key: "tab.help", active: func() bool { return mw.activeTab == tabHilfe }, onClick: func() { mw.showTab(tabHilfe) }},
+		{key: "tab.about", active: func() bool { return mw.activeTab == tabUeber }, onClick: func() { mw.showTab(tabUeber) }},
 	}
 
 	err := MainWindow{
@@ -416,6 +421,7 @@ func (mw *AppWindow) build() error {
 					mw.spielPanel(),
 					mw.einstellungenPanel(),
 					mw.help.panel(&mw.panelHilfe),
+					mw.about.panel(&mw.panelUeber),
 				},
 			},
 		},
@@ -442,6 +448,7 @@ func (mw *AppWindow) build() error {
 	}
 	mw.langToggle.SetCursor(walk.CursorHand())
 	mw.help.attach()
+	mw.about.attach()
 
 	// Die Statusleiste zeichnet beim Breiterziehen nur den neuen Streifen; der
 	// Bereich rechts vom letzten Feld behielt so jeden alten Groessengriff
@@ -530,6 +537,7 @@ func (mw *AppWindow) tabBar() Widget {
 			mw.tabWidget(mw.tabs[0], 110),
 			mw.tabWidget(mw.tabs[1], 140),
 			mw.tabWidget(mw.tabs[2], 90),
+			mw.tabWidget(mw.tabs[3], 80),
 			HSpacer{},
 			mw.langWidget(),
 			HSpacer{Size: gutter - 6},
@@ -1033,6 +1041,7 @@ func (mw *AppWindow) retranslate() {
 	}
 	mw.langToggle.Invalidate()
 	mw.help.retranslate()
+	mw.about.retranslate()
 
 	mw.t.accPlayer.SetText(tr("acc.player"))
 	mw.t.accPassword.SetText(tr("acc.password"))
@@ -1173,6 +1182,7 @@ func (mw *AppWindow) showTab(tab int) {
 	mw.panelSpiel.SetVisible(tab == tabSpiel)
 	mw.panelEinstellungen.SetVisible(tab == tabEinstellungen)
 	mw.panelHilfe.SetVisible(tab == tabHilfe)
+	mw.panelUeber.SetVisible(tab == tabUeber)
 	for _, t := range mw.tabs {
 		t.w.Invalidate()
 	}

@@ -9,7 +9,8 @@ import (
 	"bytes"
 	_ "embed"
 	"image"
-	"image/jpeg"
+	_ "image/jpeg"
+	_ "image/png"
 	"strconv"
 	"strings"
 	"syscall"
@@ -31,7 +32,26 @@ var helpEN string
 //go:embed help_interface.jpg
 var helpInterfaceJPG []byte
 
-var helpImages = map[string][]byte{"help_interface.jpg": helpInterfaceJPG}
+//go:embed about_de.txt
+var aboutDE string
+
+//go:embed about_en.txt
+var aboutEN string
+
+// Bilder des Reiters "Über": das ClusterForce-Logo der Website und eine Szene
+// aus ClusterForce (beide aus clusterforce-website/assets, verkleinert).
+//
+//go:embed about_logo_cf.png
+var aboutLogoPNG []byte
+
+//go:embed about_shot.jpg
+var aboutShotJPG []byte
+
+var helpImages = map[string][]byte{
+	"help_interface.jpg": helpInterfaceJPG,
+	"about_logo_cf.png":  aboutLogoPNG,
+	"about_shot.jpg":     aboutShotJPG,
+}
 
 const (
 	hbPara = iota
@@ -43,11 +63,12 @@ const (
 )
 
 type helpBlock struct {
-	kind int
-	term string // hbTerm: Begriff links
-	text string // Absatz, Ueberschrift, Beschreibung, Linktext, Bildname
-	url  string // hbLink
-	ball byte   // hbTerm: 'r', 'b', 'y' fuer einen farbigen Ball vor dem Begriff
+	kind  int
+	term  string // hbTerm: Begriff links
+	text  string // Absatz, Ueberschrift, Beschreibung, Linktext, Bildname
+	url   string // hbLink
+	ball  byte   // hbTerm: 'r', 'b', 'y' fuer einen farbigen Ball vor dem Begriff
+	width int    // hbImage: hoechstens so breit (logische Pixel), 0 = Seitenbreite
 }
 
 type helpChapter struct {
@@ -77,7 +98,9 @@ func parseHelp(src string) []helpChapter {
 		case strings.HasPrefix(line, "- "):
 			b = helpBlock{kind: hbBullet, text: strings.TrimSpace(line[2:])}
 		case strings.HasPrefix(line, "[img ") && strings.HasSuffix(line, "]"):
-			b = helpBlock{kind: hbImage, text: strings.TrimSpace(line[5 : len(line)-1])}
+			n, w, _ := strings.Cut(line[5:len(line)-1], "|")
+			b = helpBlock{kind: hbImage, text: strings.TrimSpace(n)}
+			b.width, _ = strconv.Atoi(strings.TrimSpace(w))
 		case strings.HasPrefix(line, "[link ") && strings.HasSuffix(line, "]"):
 			t, u, _ := strings.Cut(line[6:len(line)-1], "|")
 			b = helpBlock{kind: hbLink, text: strings.TrimSpace(t), url: strings.TrimSpace(u)}
@@ -94,19 +117,17 @@ func parseHelp(src string) []helpChapter {
 	return out
 }
 
-var helpParsed = map[string][]helpChapter{}
-
-// helpChapters liefert die Kapitel in der aktuellen Sprache.
-func helpChapters() []helpChapter {
-	if c, ok := helpParsed[currentLang]; ok {
+// chapters liefert die Kapitel in der aktuellen Sprache.
+func (h *helpView) chapters() []helpChapter {
+	if c, ok := h.parsed[currentLang]; ok {
 		return c
 	}
-	src := helpDE
+	src := h.de
 	if currentLang == "en" {
-		src = helpEN
+		src = h.en
 	}
 	c := parseHelp(src)
-	helpParsed[currentLang] = c
+	h.parsed[currentLang] = c
 	return c
 }
 
@@ -134,9 +155,14 @@ type helpItem struct {
 	fill  bool // r ist eine Flaeche in color (Akzentlinie)
 }
 
+// helpView zeigt Seiten im Format von help_de.txt: die Hilfe mit
+// Kapitelleiste, "Über" als einzelne Seite ohne Leiste.
 type helpView struct {
 	mw       *AppWindow
-	nav      *walk.CustomWidget
+	de, en   string // Quelltexte je Sprache
+	withNav  bool
+	parsed   map[string][]helpChapter
+	nav      *walk.CustomWidget // nil ohne Kapitelleiste
 	page     *walk.CustomWidget
 	chapter  int
 	scroll   int // Pixel
@@ -155,8 +181,9 @@ type helpView struct {
 	images                                              map[string]*walk.Bitmap
 }
 
-func newHelpView(mw *AppWindow) *helpView {
-	h := &helpView{mw: mw, images: map[string]*walk.Bitmap{}}
+func newHelpView(mw *AppWindow, de, en string, withNav bool) *helpView {
+	h := &helpView{mw: mw, de: de, en: en, withNav: withNav,
+		parsed: map[string][]helpChapter{}, images: map[string]*walk.Bitmap{}}
 	h.fTitle, _ = walk.NewFont(fontFamily, 16, walk.FontBold)
 	h.fSub, _ = walk.NewFont(fontFamily, 11, walk.FontBold)
 	h.fBody, _ = walk.NewFont(fontFamily, 10, 0)
@@ -174,47 +201,55 @@ const (
 	helpBar      = 8  // Breite der Scrollleiste
 )
 
-// panel baut den Reiter: Kapitelliste links, Seite rechts.
+// panel baut den Reiter: Kapitelliste links (falls gewuenscht), Seite rechts.
 func (h *helpView) panel(assign **walk.Composite) Widget {
+	page := CustomWidget{
+		AssignTo:            &h.page,
+		StretchFactor:       10,
+		DoubleBuffering:     true,
+		InvalidatesOnResize: true,
+		Paint:               func(c *walk.Canvas, _ walk.Rectangle) error { return h.paintPage(c) },
+		OnMouseDown:         func(x, y int, b walk.MouseButton) { h.mouseDown(x, y, b) },
+		OnMouseMove:         func(x, y int, b walk.MouseButton) { h.mouseMove(x, y) },
+		OnMouseUp:           func(x, y int, b walk.MouseButton) { h.mouseUp(x, y, b) },
+		OnKeyDown:           func(k walk.Key) { h.key(k) },
+	}
+	children := []Widget{page}
+	if h.withNav {
+		children = []Widget{h.navWidget(), page}
+	}
 	return Composite{
 		AssignTo: assign,
 		Visible:  false,
 		Layout:   HBox{Margins: Margins{Left: gutter, Top: 12, Right: gutter, Bottom: 10}, Spacing: gapM},
-		Children: []Widget{
-			CustomWidget{
-				AssignTo:            &h.nav,
-				MinSize:             Size{Width: helpNavWidth},
-				MaxSize:             Size{Width: helpNavWidth},
-				DoubleBuffering:     true,
-				InvalidatesOnResize: true,
-				Paint:               func(c *walk.Canvas, _ walk.Rectangle) error { return h.paintNav(c) },
-				OnMouseUp: func(x, y int, b walk.MouseButton) {
-					if b != walk.LeftButton {
-						return
-					}
-					if i := (y - h.nav.IntFrom96DPI(6)) / h.nav.IntFrom96DPI(helpNavRow); i >= 0 && i < len(helpChapters()) {
-						h.show(i)
-					}
-				},
-			},
-			CustomWidget{
-				AssignTo:            &h.page,
-				StretchFactor:       10,
-				DoubleBuffering:     true,
-				InvalidatesOnResize: true,
-				Paint:               func(c *walk.Canvas, _ walk.Rectangle) error { return h.paintPage(c) },
-				OnMouseDown:         func(x, y int, b walk.MouseButton) { h.mouseDown(x, y, b) },
-				OnMouseMove:         func(x, y int, b walk.MouseButton) { h.mouseMove(x, y) },
-				OnMouseUp:           func(x, y int, b walk.MouseButton) { h.mouseUp(x, y, b) },
-				OnKeyDown:           func(k walk.Key) { h.key(k) },
-			},
+		Children: children,
+	}
+}
+
+func (h *helpView) navWidget() Widget {
+	return CustomWidget{
+		AssignTo:            &h.nav,
+		MinSize:             Size{Width: helpNavWidth},
+		MaxSize:             Size{Width: helpNavWidth},
+		DoubleBuffering:     true,
+		InvalidatesOnResize: true,
+		Paint:               func(c *walk.Canvas, _ walk.Rectangle) error { return h.paintNav(c) },
+		OnMouseUp: func(x, y int, b walk.MouseButton) {
+			if b != walk.LeftButton {
+				return
+			}
+			if i := (y - h.nav.IntFrom96DPI(6)) / h.nav.IntFrom96DPI(helpNavRow); i >= 0 && i < len(h.chapters()) {
+				h.show(i)
+			}
 		},
 	}
 }
 
 // attach haengt das Mausrad an; das geht erst, wenn das Widget existiert.
 func (h *helpView) attach() {
-	h.nav.SetCursor(walk.CursorHand())
+	if h.nav != nil {
+		h.nav.SetCursor(walk.CursorHand())
+	}
 	h.page.MouseWheel().Attach(func(x, y int, b walk.MouseButton) {
 		h.scrollBy(-walk.MouseWheelEventDelta(b) * h.page.IntFrom96DPI(60) / 120)
 	})
@@ -223,17 +258,21 @@ func (h *helpView) attach() {
 // show wechselt das Kapitel und springt an den Anfang.
 func (h *helpView) show(i int) {
 	h.chapter, h.scroll = i, 0
-	h.nav.Invalidate()
+	if h.nav != nil {
+		h.nav.Invalidate()
+	}
 	h.page.Invalidate()
 }
 
 // retranslate: nach dem Sprachwechsel dasselbe Kapitel in der neuen Sprache.
 func (h *helpView) retranslate() {
-	if n := len(helpChapters()); h.chapter >= n {
+	if n := len(h.chapters()); h.chapter >= n {
 		h.chapter = 0
 	}
 	h.scroll = 0
-	h.nav.Invalidate()
+	if h.nav != nil {
+		h.nav.Invalidate()
+	}
 	h.page.Invalidate()
 }
 
@@ -242,7 +281,7 @@ func (h *helpView) paintNav(c *walk.Canvas) error {
 	c.FillRectanglePixels(brushOf(colAccountBar), b)
 	px := h.nav.IntFrom96DPI
 	y := px(6)
-	for i, ch := range helpChapters() {
+	for i, ch := range h.chapters() {
 		r := walk.Rectangle{X: 0, Y: y, Width: b.Width, Height: px(helpNavRow)}
 		font, col := h.fNav, colNavText
 		if i == h.chapter {
@@ -264,7 +303,7 @@ func (h *helpView) layout(c *walk.Canvas, w int) {
 	h.layoutAt.width, h.layoutAt.chapter, h.layoutAt.lang = w, h.chapter, currentLang
 	h.items = h.items[:0]
 	px := h.page.IntFrom96DPI
-	chs := helpChapters()
+	chs := h.chapters()
 	if h.chapter >= len(chs) {
 		h.height = 0
 		return
@@ -272,6 +311,10 @@ func (h *helpView) layout(c *walk.Canvas, w int) {
 	ch := chs[h.chapter]
 	x0, right := px(helpPad), w-px(helpPad)-px(helpBar)
 	width := right - x0
+	// Lesbare Zeilenlaenge, auch wenn das Fenster sehr breit ist.
+	if max := px(760); width > max {
+		width = max
+	}
 	measure := func(s string, f *walk.Font, wd int) int {
 		r, _, err := c.MeasureTextPixels(s, f, walk.Rectangle{Width: wd, Height: 100000}, walk.TextWordbreak)
 		if err != nil {
@@ -330,7 +373,11 @@ func (h *helpView) layout(c *walk.Canvas, w int) {
 				font: h.fLink, color: colHelpLink, url: b.url})
 			y += hh
 		case hbImage:
-			bmp := h.image(b.text, width)
+			maxW := width
+			if b.width > 0 && px(b.width) < maxW {
+				maxW = px(b.width)
+			}
+			bmp := h.image(b.text, maxW)
 			if bmp == nil {
 				break
 			}
@@ -387,7 +434,7 @@ func (h *helpView) image(name string, maxW int) *walk.Bitmap {
 	if !ok {
 		return nil
 	}
-	img, err := jpeg.Decode(bytes.NewReader(data))
+	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return nil
 	}

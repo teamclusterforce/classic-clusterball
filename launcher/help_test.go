@@ -8,8 +8,13 @@ import (
 // Beide Sprachen haben dieselben Kapitel mit demselben Aufbau, sonst springt
 // der Hilfe-Reiter beim Umschalten auf ein anderes Kapitel oder es fehlt Text.
 func TestHilfeBeideSprachenGleichAufgebaut(t *testing.T) {
-	de, en := parseHelp(helpDE), parseHelp(helpEN)
-	if len(de) < 10 || len(de) != len(en) {
+	gleichAufgebaut(t, helpDE, helpEN, 10)
+	gleichAufgebaut(t, aboutDE, aboutEN, 1)
+}
+
+func gleichAufgebaut(t *testing.T, srcDE, srcEN string, minChapters int) {
+	de, en := parseHelp(srcDE), parseHelp(srcEN)
+	if len(de) < minChapters || len(de) != len(en) {
 		t.Fatalf("Kapitel: de %d, en %d", len(de), len(en))
 	}
 	for i := range de {
@@ -19,7 +24,7 @@ func TestHilfeBeideSprachenGleichAufgebaut(t *testing.T) {
 		}
 		for j := range de[i].blocks {
 			a, b := de[i].blocks[j], en[i].blocks[j]
-			if a.kind != b.kind || a.ball != b.ball {
+			if a.kind != b.kind || a.ball != b.ball || a.width != b.width {
 				t.Errorf("Kapitel %q, Block %d: %q gegen %q", de[i].title, j, a.term+a.text, b.term+b.text)
 			}
 		}
@@ -27,7 +32,7 @@ func TestHilfeBeideSprachenGleichAufgebaut(t *testing.T) {
 }
 
 func TestHilfeBloecke(t *testing.T) {
-	for _, src := range []string{helpDE, helpEN} {
+	for i, src := range []string{helpDE, helpEN, aboutDE, aboutEN} {
 		for _, ch := range parseHelp(src) {
 			if ch.title == "" || len(ch.blocks) == 0 {
 				t.Errorf("leeres Kapitel %q", ch.title)
@@ -47,7 +52,11 @@ func TestHilfeBloecke(t *testing.T) {
 						t.Errorf("Begriff ohne Text: %q", b.term+b.text)
 					}
 				}
-				// Kein Rest der alten Installations- und XDCC-Kapitel.
+				// Kein Rest der alten Installations- und XDCC-Kapitel (nur Hilfe;
+				// "Über" nennt Glide als das, was ersetzt wurde).
+				if i >= 2 {
+					continue
+				}
 				for _, bad := range []string{"XDCC", "XDream", "Glide", "3dfx"} {
 					if strings.Contains(b.term+b.text, bad) {
 						t.Errorf("%q in %q", bad, b.term+b.text)
@@ -59,7 +68,7 @@ func TestHilfeBloecke(t *testing.T) {
 }
 
 func TestHilfeFormat(t *testing.T) {
-	ch := parseHelp("# Kommentar\n= Eins\n## Unter\nAbsatz\n- Punkt\n@r ROT :: 1 Punkt\nA :: B\n[img x.jpg]\n[link Text|https://a.b/]\n")
+	ch := parseHelp("# Kommentar\n= Eins\n## Unter\nAbsatz\n- Punkt\n@r ROT :: 1 Punkt\nA :: B\n[img x.jpg]\n[img y.png|220]\n[link Text|https://a.b/]\n")
 	if len(ch) != 1 || ch[0].title != "Eins" {
 		t.Fatalf("%+v", ch)
 	}
@@ -70,6 +79,7 @@ func TestHilfeFormat(t *testing.T) {
 		{kind: hbTerm, term: "ROT", text: "1 Punkt", ball: 'r'},
 		{kind: hbTerm, term: "A", text: "B"},
 		{kind: hbImage, text: "x.jpg"},
+		{kind: hbImage, text: "y.png", width: 220},
 		{kind: hbLink, text: "Text", url: "https://a.b/"},
 	}
 	if len(ch[0].blocks) != len(want) {

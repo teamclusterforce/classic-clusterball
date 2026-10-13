@@ -53,6 +53,7 @@ var textsDE = map[string]string{
 	"tab.game":     "Spiel",
 	"tab.settings": "Einstellungen",
 	"tab.help":     "Hilfe",
+	"tab.about":    "Über",
 
 	"acc.player":      "Spieler:",
 	"acc.playerCue":   "clusterball.de Account",
@@ -160,6 +161,7 @@ var textsEN = map[string]string{
 	"tab.game":     "Play",
 	"tab.settings": "Settings",
 	"tab.help":     "Help",
+	"tab.about":    "About",
 
 	"acc.player":      "Player:",
 	"acc.playerCue":   "clusterball.de account",

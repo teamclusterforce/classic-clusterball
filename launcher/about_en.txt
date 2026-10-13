@@ -1,0 +1,25 @@
+# "About" tab, English. Same format as help_en.txt; [img file|width] limits the width (logical pixels).
+# The ClusterForce lines are worded exactly as in the Steam store text (CF: steam/steam-store/text/english/about.bbcode).
+
+= About
+## Clusterball Re-Enhanced
+Clusterball came out in 2000 and still has a loyal community. On today's computers, though, it barely runs: Glide and the old OpenGL drivers are gone, its resolutions date from the days of CRT monitors, and the old launcher depended on services that were switched off long ago.
+Re-Enhanced makes the original playable again without changing it:
+- A Direct3D 11 renderer of its own instead of Glide and OpenGL, at any resolution up to 4K, with anti-aliasing and ambient occlusion.
+- HD textures (4x), switchable off.
+- Sharp text in menus and HUD.
+- This launcher: servers, settings and manual in one place.
+Gameplay, flight model, weapons and worlds stay exactly as they were. It is the same Clusterball, just running again – so the original can be played alongside its successor.
+Accounts, ranking and forum are provided by the community at clusterball.de.
+[link www.clusterball.de|https://www.clusterball.de/]
+[link Re-Enhanced source code on GitHub|https://github.com/teamclusterforce/classic-clusterball]
+## ClusterForce
+[img about_logo_cf.png|200]
+[img about_shot.jpg]
+ClusterForce is a spiritual successor to Clusterball, made by Team ClusterForce: a fast arcade 3D flying sports game for up to 8 players online. COLLECT · STEAL · DOMINATE.
+- Pilot one of 8 electromagnetic flyers, the gliders, across the sports grounds, the venue
+- Collect the energy balls from the magnetic ramps
+- Use the weapons scattered across the map to disrupt your rivals or steal their balls
+- Score by delivering as many balls as you can to the goal zone
+[link ClusterForce on Steam|https://store.steampowered.com/app/5063650/]
+[link www.clusterforce.net|https://www.clusterforce.net/]
