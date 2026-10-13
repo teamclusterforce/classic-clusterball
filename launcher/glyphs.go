@@ -69,7 +69,7 @@ func (g *glyphCache) keycap(w, h, dpi int, active bool) *walk.Bitmap {
 	}
 	s := float32(dpi) / 96
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
-	draw.Draw(img, img.Bounds(), image.NewUniform(nrgba(colPanel())), image.Point{}, draw.Src)
+	draw.Draw(img, img.Bounds(), image.NewUniform(nrgba(colCard)), image.Point{}, draw.Src)
 	edge, face := walk.RGB(168, 177, 192), walk.RGB(255, 255, 255)
 	if active {
 		edge, face = colAccentDown, walk.RGB(255, 246, 214)
@@ -97,7 +97,7 @@ func (g *glyphCache) mouse(kind, part, dpi int) *walk.Bitmap {
 	}
 	h := int(math.Ceil(float64(mh + 1)))
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
-	draw.Draw(img, img.Bounds(), image.NewUniform(nrgba(colPanel())), image.Point{}, draw.Src)
+	draw.Draw(img, img.Bounds(), image.NewUniform(nrgba(colCard)), image.Point{}, draw.Src)
 	ink, accent, white := nrgba(walk.RGB(60, 70, 90)), nrgba(colAccent), color.NRGBA{255, 255, 255, 255}
 	x0, y0 := float32(0.5), float32(0.5)
 	x1, y1 := x0+mw, y0+mh

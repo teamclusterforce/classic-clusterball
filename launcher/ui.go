@@ -5,6 +5,7 @@
 package main
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/lxn/walk"
@@ -147,6 +148,143 @@ func (mw *AppWindow) langWidget() Widget {
 			} else {
 				mw.switchLanguage("en")
 			}
+		},
+	}
+}
+
+// ── Formular-Karten (Einstellungen und Steuerung) ────────────────────────────
+//
+// Beide Seiten bauen auf denselben Teilen auf, damit sie gleich aussehen:
+// weisse Karten mit Ueberschrift und gelbem Strich, darin Zeilen fester Hoehe
+// mit gleich breiter Beschriftungsspalte, darunter eine Fussleiste mit
+// Hinweis links und Knoepfen rechts.
+
+const (
+	formRowHeight  = 28
+	formLabelWidth = 170
+	formCardPad    = 14
+)
+
+var (
+	colCard     = walk.RGB(255, 255, 255) // Kartengrund; auch der Grund der Tastensymbole
+	colCardEdge = walk.RGB(214, 220, 230)
+)
+
+// formRow: Beschriftung links (feste Breite), Bedienelement rechts, beides
+// vertikal mittig in einer Zeile fester Hoehe.
+func formRow(label **walk.Label, key, tip string, control Widget) Widget {
+	return Composite{
+		MinSize: Size{Height: formRowHeight},
+		MaxSize: Size{Height: formRowHeight},
+		Layout:  HBox{MarginsZero: true, Spacing: gapM, Alignment: AlignHNearVCenter},
+		Children: []Widget{
+			Label{AssignTo: label, Text: tr(key), Font: fontBody, ToolTipText: tip,
+				MinSize: Size{Width: formLabelWidth}, MaxSize: Size{Width: formLabelWidth}},
+			control,
+			HSpacer{},
+		},
+	}
+}
+
+// formCard: weisse Karte mit 1 px Rand, Ueberschrift, gelbem Strich und
+// den Zeilen darunter.
+func formCard(title **walk.Label, key string, rows ...Widget) Widget {
+	children := []Widget{
+		Label{AssignTo: title, Text: tr(key), Font: fontHeading},
+		Composite{
+			Layout: HBox{MarginsZero: true, SpacingZero: true},
+			Children: []Widget{
+				Composite{
+					MinSize:    Size{Width: 36, Height: 3},
+					MaxSize:    Size{Width: 36, Height: 3},
+					Layout:     HBox{MarginsZero: true},
+					Background: SolidColorBrush{Color: colAccent},
+				},
+				HSpacer{},
+			},
+		},
+		VSpacer{Size: gapS},
+	}
+	children = append(children, rows...)
+	// Feste Hoehe: Tastensymbole sind CustomWidgets und melden immer "will
+	// wachsen" - ohne Deckel wuerde die Karte auf die Hoehe der Nachbarspalte
+	// gestreckt und ihre Zeilen auseinandergezogen.
+	h := 2 + 20 + 17 + 3 + gapS + len(rows)*formRowHeight + 2
+	return Composite{
+		MinSize:    Size{Height: h},
+		MaxSize:    Size{Height: h},
+		Background: SolidColorBrush{Color: colCardEdge},
+		Layout:     VBox{Margins: Margins{Left: 1, Top: 1, Right: 1, Bottom: 1}},
+		Children: []Widget{
+			Composite{
+				Background: SolidColorBrush{Color: colCard},
+				Layout: VBox{Margins: Margins{Left: formCardPad, Top: 10, Right: formCardPad, Bottom: 10},
+					SpacingZero: true, Alignment: AlignHNearVNear},
+				Children: children,
+			},
+		},
+	}
+}
+
+// formColumn: Karten untereinander, oben ausgerichtet.
+func formColumn(cards ...Widget) Widget {
+	return Composite{
+		Layout:   VBox{MarginsZero: true, Spacing: gapM, Alignment: AlignHNearVNear},
+		Children: append(cards, VSpacer{}),
+	}
+}
+
+// formFooter: Hinweise links (muted, kursiv), Knoepfe rechts.
+func formFooter(hints []Widget, buttons ...Widget) Widget {
+	children := []Widget{
+		Composite{Layout: VBox{MarginsZero: true, SpacingZero: true, Alignment: AlignHNearVCenter}, Children: hints},
+		HSpacer{},
+	}
+	children = append(children, buttons...)
+	return Composite{
+		MinSize:  Size{Height: 34},
+		Layout:   HBox{MarginsZero: true, Spacing: gapS, Alignment: AlignHNearVCenter},
+		Children: children,
+	}
+}
+
+// formHint ist eine Hinweiszeile fuer formFooter.
+func formHint(assign **walk.Label, key string) Widget {
+	return Label{AssignTo: assign, Text: tr(key), Font: fontHint, TextColor: colMuted}
+}
+
+// presetBar: die Leiste mit den Voreinstellungen oben auf beiden Seiten.
+func presetBar(label **walk.Label, buttons ...Widget) Widget {
+	children := []Widget{Label{AssignTo: label, Text: tr("set.preset"), Font: fontBodyBold}}
+	children = append(children, buttons...)
+	children = append(children, HSpacer{})
+	return Composite{
+		Background: SolidColorBrush{Color: colAccountBar},
+		Layout:     HBox{Margins: Margins{Left: gapM, Top: 8, Right: gapM, Bottom: 8}, Spacing: gapS},
+		Children:   children,
+	}
+}
+
+// valueSlider: Regler lo … hi mit Zahl dahinter.
+func valueSlider(assign **walk.Slider, label **walk.Label, lo, hi int, onChange func()) Widget {
+	return Composite{
+		Layout: HBox{MarginsZero: true, Spacing: gapS, Alignment: AlignHNearVCenter},
+		Children: []Widget{
+			Slider{
+				AssignTo: assign,
+				MinValue: lo,
+				MaxValue: hi,
+				MinSize:  Size{Width: 150},
+				MaxSize:  Size{Width: 150},
+				Tracking: true,
+				OnValueChanged: func() {
+					(*label).SetText(strconv.Itoa((*assign).Value()))
+					if onChange != nil {
+						onChange()
+					}
+				},
+			},
+			Label{AssignTo: label, Text: "0", Font: fontBody, MinSize: Size{Width: 28}},
 		},
 	}
 }

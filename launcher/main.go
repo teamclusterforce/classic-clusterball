@@ -197,6 +197,10 @@ type texts struct {
 	setAniso      *walk.Label
 	setTexPack    *walk.Label
 	setSharpen    *walk.Label
+	setVSync      *walk.Label
+	setFontRep    *walk.Label
+	setAO         *walk.Label
+	setExternal   *walk.Label
 	d3dHint       *walk.Label
 	setGame       *walk.Label
 	setBrightness *walk.Label
@@ -481,6 +485,7 @@ func (mw *AppWindow) build() error {
 	})
 
 	mw.applyConfig()
+	mw.controls.ready = true
 	mw.showTab(tabSpiel)
 
 	// Der Launcher gehoert neben die Clusterball.exe. Liegt sie dort nicht,
@@ -784,40 +789,13 @@ func (mw *AppWindow) serverList() Widget {
 // ── Tab: Einstellungen ────────────────────────────────────────────────────────
 
 func (mw *AppWindow) einstellungenPanel() Widget {
-	// combo baut eine Auswahlliste fester Breite, linksbuendig in ihrer Zelle.
+	// combo baut eine Auswahlliste fester Breite.
 	combo := func(assign **walk.ComboBox, model []string, tip string) Widget {
-		return Composite{
-			Layout: HBox{MarginsZero: true, SpacingZero: true},
-			Children: []Widget{
-				ComboBox{AssignTo: assign, Model: model, Font: fontBody, ToolTipText: tip,
-					MinSize: Size{Width: 150}, MaxSize: Size{Width: 150}},
-				HSpacer{},
-			},
-		}
+		return ComboBox{AssignTo: assign, Model: model, Font: fontBody, ToolTipText: tip,
+			MinSize: Size{Width: 160}, MaxSize: Size{Width: 160}}
 	}
-	// slider baut einen Regler 0 … max mit Zahlenanzeige.
-	slider := func(assign **walk.Slider, label **walk.Label, lo, hi int) Widget {
-		return Composite{
-			Layout: HBox{MarginsZero: true, Spacing: gapS},
-			Children: []Widget{
-				Slider{
-					AssignTo: assign,
-					MinValue: lo,
-					MaxValue: hi,
-					MinSize:  Size{Width: 150},
-					MaxSize:  Size{Width: 150},
-					Tracking: true,
-					OnValueChanged: func() {
-						(*label).SetText(fmt.Sprintf("%d", (*assign).Value()))
-					},
-				},
-				Label{AssignTo: label, Text: "0", Font: fontBody, MinSize: Size{Width: 28}},
-				HSpacer{},
-			},
-		}
-	}
-	hint := func(assign **walk.Label, key string) Widget {
-		return Label{AssignTo: assign, Text: tr(key), Font: fontHint, TextColor: walk.RGB(120, 125, 135)}
+	check := func(assign **walk.CheckBox, tip string) Widget {
+		return CheckBox{AssignTo: assign, Font: fontBody, ToolTipText: tip}
 	}
 
 	return Composite{
@@ -827,156 +805,95 @@ func (mw *AppWindow) einstellungenPanel() Widget {
 		Children: []Widget{
 			// Voreinstellungen fuer die Grafik: setzen Kantenglaettung,
 			// Supersampling, Filterung und Umgebungsverdeckung auf einmal.
+			presetBar(&mw.t.setPreset, mw.presetButton(0), mw.presetButton(1), mw.presetButton(2), mw.presetButton(3)),
 			Composite{
-				Background: SolidColorBrush{Color: colAccountBar},
-				Layout:     HBox{Margins: Margins{Left: gapM, Top: 8, Right: gapM, Bottom: 8}, Spacing: gapS},
+				Layout: HBox{MarginsZero: true, Spacing: gapM, Alignment: AlignHNearVNear},
 				Children: []Widget{
-					Label{AssignTo: &mw.t.setPreset, Text: tr("set.preset"), Font: fontBodyBold},
-					mw.presetButton(0), mw.presetButton(1), mw.presetButton(2), mw.presetButton(3),
-					HSpacer{},
+					// Alles hier landet in der clusterball_d3d.ini, siehe
+					// writeD3DSettings. Die Detailstufe des Spiels steht fest
+					// (gameQuality), die Mausempfindlichkeit steht unter Steuerung.
+					formColumn(
+						formCard(&mw.t.setGraphics, "set.graphics",
+							formRow(&mw.t.setDisplay, "set.display", "", combo(&mw.cmbDisplay, displayLabels(), "")),
+							formRow(&mw.t.setResolution, "set.resolution", tr("set.resolutionTip"),
+								combo(&mw.cmbRes, resLabels(resValues), tr("set.resolutionTip"))),
+							formRow(&mw.t.setTexPack, "set.texPack", tr("set.texPackTip"),
+								combo(&mw.cmbTexPack, packLabels(), tr("set.texPackTip"))),
+							formRow(&mw.t.setMSAA, "set.msaa", "", combo(&mw.cmbMSAA, msaaLabels(), "")),
+							formRow(&mw.t.setSS, "set.ss", tr("set.ssTip"), combo(&mw.cmbSS, ssLabels(), tr("set.ssTip"))),
+							formRow(&mw.t.setAniso, "set.aniso", "", combo(&mw.cmbAniso, anisoLabels(), "")),
+							formRow(&mw.t.setVSync, "set.vsync", "", check(&mw.chkVSync, "")),
+						),
+					),
+					formColumn(
+						// Gamma des Renderers in Prozent: die Helligkeit des Spiels
+						// selbst wirkt unter Direct3D nicht, siehe D3DSettings.Gamma.
+						formCard(&mw.t.setGame, "set.image",
+							formRow(&mw.t.setSharpen, "set.sharpen", "", valueSlider(&mw.sldSharpen, &mw.lblSharpen, 0, 100, nil)),
+							formRow(&mw.t.setBrightness, "set.brightness", "",
+								valueSlider(&mw.sldBrightness, &mw.lblBrightness, 50, 150, nil)),
+							formRow(&mw.t.setAO, "set.ao", tr("set.aoTip"), check(&mw.chkAO, tr("set.aoTip"))),
+							formRow(&mw.t.setFontRep, "set.font", tr("set.fontTip"), check(&mw.chkFont, tr("set.fontTip"))),
+						),
+						// Eigene IP fuer den Dedicated Host. Die Adresse des
+						// Master-Servers steht nur in der clusterball.ini (server_ip);
+						// ein Feld fuer die Host-IP gibt es nicht, der Master-Server
+						// liest sie aus dem Absender des UDP-Heartbeats.
+						formCard(&mw.t.setNetwork, "set.network",
+							formRow(&mw.t.setOwnIP, "act.ownIP", "", Composite{
+								Layout: HBox{MarginsZero: true, Spacing: 4, Alignment: AlignHNearVCenter},
+								Children: []Widget{
+									LineEdit{AssignTo: &mw.editOwnIP, Text: mw.cfg.OwnIP, Font: fontBody,
+										MinSize: Size{Width: 130}, MaxSize: Size{Width: 130}},
+									PushButton{
+										AssignTo:    &mw.t.btnDetectIP,
+										Text:        "↻",
+										Font:        fontBody,
+										MinSize:     Size{Width: 26, Height: 23},
+										MaxSize:     Size{Width: 26, Height: 23},
+										ToolTipText: tr("act.detectTip"),
+										OnClicked:   func() { mw.detectExternalIP() },
+									},
+									HSpacer{},
+								},
+							}),
+							formRow(&mw.t.setExternal, "act.external", "", CheckBox{
+								AssignTo: &mw.chkExternalIP,
+								Font:     fontBody,
+								OnClicked: func() {
+									mw.cfg.UseExternalIP = mw.chkExternalIP.Checked()
+									if mw.chkExternalIP.Checked() {
+										mw.detectExternalIP()
+									}
+								},
+							}),
+						),
+					),
 				},
 			},
-			Composite{
-				Layout: HBox{MarginsZero: true, Spacing: 24, Alignment: AlignHNearVNear},
-				Children: []Widget{
-
-					// Linke Spalte: Direct3D-Schicht. HNear, sonst zentriert walk
-					// jede Zeile einzeln in der Spaltenbreite - Checkboxen stehen
-					// dann versetzt zueinander statt bündig.
-					Composite{
-						Layout: VBox{MarginsZero: true, Spacing: gapS, Alignment: AlignHNearVNear},
-						Children: []Widget{
-							// Alles hier landet in der clusterball_d3d.ini,
-							// siehe writeD3DSettings.
-							Label{AssignTo: &mw.t.setGraphics, Text: tr("set.graphics"), Font: fontHeading},
-							Composite{
-								Layout: Grid{Columns: 2, MarginsZero: true, Spacing: gapS},
-								Children: []Widget{
-									Label{AssignTo: &mw.t.setDisplay, Text: tr("set.display"), Font: fontBody},
-									combo(&mw.cmbDisplay, displayLabels(), ""),
-									Label{AssignTo: &mw.t.setResolution, Text: tr("set.resolution"), Font: fontBody,
-										ToolTipText: tr("set.resolutionTip")},
-									combo(&mw.cmbRes, resLabels(resValues), tr("set.resolutionTip")),
-									Label{AssignTo: &mw.t.setMSAA, Text: tr("set.msaa"), Font: fontBody},
-									combo(&mw.cmbMSAA, msaaLabels(), ""),
-									Label{AssignTo: &mw.t.setSS, Text: tr("set.ss"), Font: fontBody,
-										ToolTipText: tr("set.ssTip")},
-									combo(&mw.cmbSS, ssLabels(), tr("set.ssTip")),
-									Label{AssignTo: &mw.t.setAniso, Text: tr("set.aniso"), Font: fontBody},
-									combo(&mw.cmbAniso, anisoLabels(), ""),
-									Label{AssignTo: &mw.t.setTexPack, Text: tr("set.texPack"), Font: fontBody,
-										ToolTipText: tr("set.texPackTip")},
-									combo(&mw.cmbTexPack, packLabels(), tr("set.texPackTip")),
-									Label{AssignTo: &mw.t.setSharpen, Text: tr("set.sharpen"), Font: fontBody},
-									slider(&mw.sldSharpen, &mw.lblSharpen, 0, 100),
-								},
-							},
-							CheckBox{AssignTo: &mw.chkVSync, Text: tr("set.vsync"), Font: fontBody},
-							CheckBox{AssignTo: &mw.chkFont, Text: tr("set.font"), Font: fontBody,
-								ToolTipText: tr("set.fontTip")},
-							CheckBox{AssignTo: &mw.chkAO, Text: tr("set.ao"), Font: fontBody,
-								ToolTipText: tr("set.aoTip")},
-							hint(&mw.t.d3dHint, "set.d3dHint"),
-						},
-					},
-
-					// Rechte Spalte: Spiel, Netzwerk, Sprache
-					Composite{
-						Layout: VBox{MarginsZero: true, Spacing: gapS, Alignment: AlignHNearVNear},
-						Children: []Widget{
-							// Helligkeit und Maus stehen in der clusterball_d3d.ini.
-							// Die Detailstufe des Spiels steht fest, siehe gameQuality.
-							Label{AssignTo: &mw.t.setGame, Text: tr("set.game"), Font: fontHeading},
-							Composite{
-								Layout: Grid{Columns: 2, MarginsZero: true, Spacing: gapS},
-								Children: []Widget{
-									Label{AssignTo: &mw.t.setBrightness, Text: tr("set.brightness"), Font: fontBody},
-									// Gamma des Renderers in Prozent: die Helligkeit des Spiels
-									// selbst wirkt unter Direct3D nicht, siehe D3DSettings.Gamma.
-									slider(&mw.sldBrightness, &mw.lblBrightness, 50, 150),
-									Label{AssignTo: &mw.t.setMouse, Text: tr("set.mouse"), Font: fontBody,
-										ToolTipText: tr("set.mouseTip")},
-									slider(&mw.sldMouse, &mw.lblMouse, 5, 100),
-								},
-							},
-							hint(&mw.t.gfxHint, "set.gfxHint"),
-
-							VSpacer{Size: gapS},
-							Label{AssignTo: &mw.t.setNetwork, Text: tr("set.network"), Font: fontHeading},
-							Composite{
-								Layout: Grid{Columns: 2, MarginsZero: true, Spacing: gapS},
-								Children: []Widget{
-									// Die Adresse des Master-Servers steht nur in der
-									// clusterball.ini (server_ip), nicht in der Oberflaeche.
-									// Eigene IP fuer den Dedicated Host. Ein Feld fuer die
-									// Host-IP gibt es nicht: der Master-Server liest die
-									// Adresse aus dem Absender des UDP-Heartbeats.
-									Label{AssignTo: &mw.t.setOwnIP, Text: tr("act.ownIP"), Font: fontBody},
-									Composite{
-										Layout: HBox{MarginsZero: true, SpacingZero: true},
-										Children: []Widget{
-											LineEdit{AssignTo: &mw.editOwnIP, Text: mw.cfg.OwnIP, Font: fontBody,
-												MinSize: Size{Width: 126}, MaxSize: Size{Width: 126}},
-											PushButton{
-												AssignTo:    &mw.t.btnDetectIP,
-												Text:        "↻",
-												Font:        fontBody,
-												MinSize:     Size{Width: 24, Height: 22},
-												MaxSize:     Size{Width: 24, Height: 22},
-												ToolTipText: tr("act.detectTip"),
-												OnClicked:   func() { mw.detectExternalIP() },
-											},
-											HSpacer{},
-										},
-									},
-									Label{},
-									CheckBox{
-										AssignTo: &mw.chkExternalIP,
-										Text:     tr("act.external"),
-										Font:     fontBody,
-										OnClicked: func() {
-											mw.cfg.UseExternalIP = mw.chkExternalIP.Checked()
-											if mw.chkExternalIP.Checked() {
-												mw.detectExternalIP()
-											}
-										},
-									},
-								},
-							},
-							// Die Sprache steht nicht hier, sondern als DE | EN
-							// rechts in der Reiterleiste (langWidget).
-						},
-					},
-				},
-			},
-
 			VSpacer{},
-
-			Composite{
-				Layout: HBox{MarginsZero: true, Spacing: gapS},
-				Children: []Widget{
-					HSpacer{},
-					PushButton{
-						AssignTo:  &mw.t.btnDefaults,
-						Text:      tr("set.defaults"),
-						Font:      fontBody,
-						MinSize:   Size{Width: 170, Height: 32},
-						MaxSize:   Size{Width: 170, Height: 32},
-						OnClicked: func() { mw.restoreDefaults() },
-					},
-					// Der Pfad gehoert in den Tooltip: als Label wuerde seine
-					// Textbreite dem ganzen Fenster die Mindestbreite diktieren.
-					PushButton{
-						AssignTo:    &mw.t.btnSave,
-						Text:        tr("set.save"),
-						Font:        fontBodyBold,
-						MinSize:     Size{Width: 200, Height: 32},
-						MaxSize:     Size{Width: 200, Height: 32},
-						ToolTipText: fmt.Sprintf(tr("set.saveTip"), configPath()),
-						OnClicked:   func() { mw.saveSettings() },
-					},
+			formFooter(
+				[]Widget{formHint(&mw.t.gfxHint, "set.gfxHint"), formHint(&mw.t.d3dHint, "set.d3dHint")},
+				PushButton{
+					AssignTo:  &mw.t.btnDefaults,
+					Text:      tr("set.defaults"),
+					Font:      fontBody,
+					MinSize:   Size{Width: 170, Height: 32},
+					MaxSize:   Size{Width: 170, Height: 32},
+					OnClicked: func() { mw.restoreDefaults() },
 				},
-			},
+				// Der Pfad gehoert in den Tooltip: als Label wuerde seine
+				// Textbreite dem ganzen Fenster die Mindestbreite diktieren.
+				PushButton{
+					AssignTo:    &mw.t.btnSave,
+					Text:        tr("set.save"),
+					Font:        fontBodyBold,
+					MinSize:     Size{Width: 200, Height: 32},
+					MaxSize:     Size{Width: 200, Height: 32},
+					ToolTipText: fmt.Sprintf(tr("set.saveTip"), configPath()),
+					OnClicked:   func() { mw.saveSettings() },
+				},
+			),
 		},
 	}
 }
@@ -1071,7 +988,7 @@ func (mw *AppWindow) retranslate() {
 	mw.t.btnDedicated.SetText(tr("act.dedicated"))
 	mw.t.setOwnIP.SetText(tr("act.ownIP"))
 	mw.t.btnDetectIP.SetToolTipText(tr("act.detectTip"))
-	mw.chkExternalIP.SetText(tr("act.external"))
+	mw.t.setExternal.SetText(tr("act.external"))
 
 	mw.btnRefresh.SetText(tr("srv.refresh"))
 	mw.t.lblTableHint.SetText(tr("srv.hint"))
@@ -1108,14 +1025,16 @@ func (mw *AppWindow) retranslate() {
 	mw.t.setTexPack.SetToolTipText(tr("set.texPackTip"))
 	mw.cmbTexPack.SetToolTipText(tr("set.texPackTip"))
 	mw.t.setSharpen.SetText(tr("set.sharpen"))
-	mw.chkVSync.SetText(tr("set.vsync"))
-	mw.chkFont.SetText(tr("set.font"))
+	mw.t.setVSync.SetText(tr("set.vsync"))
+	mw.t.setFontRep.SetText(tr("set.font"))
+	mw.t.setFontRep.SetToolTipText(tr("set.fontTip"))
 	mw.chkFont.SetToolTipText(tr("set.fontTip"))
-	mw.chkAO.SetText(tr("set.ao"))
+	mw.t.setAO.SetText(tr("set.ao"))
+	mw.t.setAO.SetToolTipText(tr("set.aoTip"))
 	mw.chkAO.SetToolTipText(tr("set.aoTip"))
 	mw.t.d3dHint.SetText(tr("set.d3dHint"))
 
-	mw.t.setGame.SetText(tr("set.game"))
+	mw.t.setGame.SetText(tr("set.image"))
 	mw.t.setBrightness.SetText(tr("set.brightness"))
 	mw.t.setMouse.SetText(tr("set.mouse"))
 	mw.t.setMouse.SetToolTipText(tr("set.mouseTip"))

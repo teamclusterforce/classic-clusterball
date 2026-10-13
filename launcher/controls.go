@@ -342,18 +342,20 @@ func nameOfVK(vk int, lang string) string {
 // ── Reiter ───────────────────────────────────────────────────────────────────
 
 type controlsView struct {
-	mw      *AppWindow
-	caps    []*walk.CustomWidget
-	labels  []*walk.Label
-	capture int // Index der Aktion, die gerade eine Taste erwartet, sonst -1
-	stop    chan struct{}
-	hint    *walk.Label
-	presets [2]*walk.PushButton
-	preset  *walk.Label
-	fCap    *walk.Font
-	fSmall  *walk.Font
-	glyphs  *glyphCache
-	mu      sync.Mutex
+	mw         *AppWindow
+	caps       []*walk.CustomWidget
+	labels     []*walk.Label
+	capture    int // Index der Aktion, die gerade eine Taste erwartet, sonst -1
+	stop       chan struct{}
+	hint       *walk.Label
+	presets    [2]*walk.PushButton
+	preset     *walk.Label
+	cardTitles [2]*walk.Label
+	ready      bool // erst nach dem Einlesen der Werte speichern
+	fCap       *walk.Font
+	fSmall     *walk.Font
+	glyphs     *glyphCache
+	mu         sync.Mutex
 }
 
 func newControlsView(mw *AppWindow) *controlsView {
@@ -366,51 +368,58 @@ func newControlsView(mw *AppWindow) *controlsView {
 }
 
 func (c *controlsView) panel(assign **walk.Composite) Widget {
-	half := (len(ctrlActions) + 1) / 2
-	column := func(from, to int) Widget {
-		var ch []Widget
+	rows := func(from, to int) []Widget {
+		var out []Widget
 		for i := from; i < to; i++ {
-			i := i
-			ch = append(ch,
-				Label{AssignTo: &c.labels[i], Text: tr("ctl." + ctrlActions[i]), Font: fontBody},
-				c.capWidget(i))
+			out = append(out, formRow(&c.labels[i], "ctl."+ctrlActions[i], "", c.capWidget(i)))
 		}
-		return Composite{Layout: Grid{Columns: 2, MarginsZero: true, Spacing: gapS}, Children: ch}
+		return out
 	}
+	half := (len(ctrlActions) + 1) / 2
+	mw := c.mw
+	// Die Mausempfindlichkeit gehoert zum Fliegen; sie steht in der
+	// clusterball_d3d.ini und wird wie die Tasten sofort gespeichert.
+	fly := append(rows(0, half), formRow(&mw.t.setMouse, "set.mouse", tr("set.mouseTip"),
+		valueSlider(&mw.sldMouse, &mw.lblMouse, 5, 100, func() { c.saveMouse() })))
 	return Composite{
 		AssignTo: assign,
 		Visible:  false,
 		Layout:   VBox{Margins: Margins{Left: gutter, Top: 12, Right: gutter, Bottom: 10}, Spacing: gapM},
 		Children: []Widget{
+			presetBar(&c.preset,
+				PushButton{AssignTo: &c.presets[0], Text: tr("ctl.presetWASD"), Font: fontBody,
+					MinSize: Size{Width: 130, Height: 26}, MaxSize: Size{Width: 130, Height: 26},
+					OnClicked: func() { c.applyPreset(presetWASD) }},
+				PushButton{AssignTo: &c.presets[1], Text: tr("ctl.presetClassic"), Font: fontBody,
+					MinSize: Size{Width: 130, Height: 26}, MaxSize: Size{Width: 130, Height: 26},
+					OnClicked: func() { c.applyPreset(presetClassic) }}),
 			Composite{
-				Background: SolidColorBrush{Color: colAccountBar},
-				Layout:     HBox{Margins: Margins{Left: gapM, Top: 8, Right: gapM, Bottom: 8}, Spacing: gapS},
+				Layout: HBox{MarginsZero: true, Spacing: gapM, Alignment: AlignHNearVNear},
 				Children: []Widget{
-					Label{AssignTo: &c.preset, Text: tr("set.preset"), Font: fontBodyBold},
-					PushButton{AssignTo: &c.presets[0], Text: tr("ctl.presetWASD"), Font: fontBody,
-						MinSize: Size{Width: 130, Height: 26}, MaxSize: Size{Width: 130, Height: 26},
-						OnClicked: func() { c.applyPreset(presetWASD) }},
-					PushButton{AssignTo: &c.presets[1], Text: tr("ctl.presetClassic"), Font: fontBody,
-						MinSize: Size{Width: 130, Height: 26}, MaxSize: Size{Width: 130, Height: 26},
-						OnClicked: func() { c.applyPreset(presetClassic) }},
-					HSpacer{},
+					formColumn(formCard(&c.cardTitles[0], "ctl.cardFly", fly...)),
+					formColumn(formCard(&c.cardTitles[1], "ctl.cardMore", rows(half, len(ctrlActions))...)),
 				},
 			},
-			Composite{
-				Layout: HBox{MarginsZero: true, Spacing: 40, Alignment: AlignHNearVNear},
-				Children: []Widget{
-					column(0, half),
-					column(half, len(ctrlActions)),
-					HSpacer{},
-				},
-			},
-			Label{AssignTo: &c.hint, Text: tr("ctl.hint"), Font: fontHint, TextColor: colMuted},
 			VSpacer{},
+			formFooter([]Widget{formHint(&c.hint, "ctl.hint")}),
 		},
 	}
 }
 
-const capWidth, capHeight = 170, 30
+// saveMouse schreibt die Mausempfindlichkeit sofort in die
+// clusterball_d3d.ini - erst, wenn die Oberflaeche fertig aufgebaut ist
+// (beim Einlesen der Werte loest der Regler ebenfalls aus).
+func (c *controlsView) saveMouse() {
+	if !c.ready {
+		return
+	}
+	c.mw.cfg.D3D.MouseScale = float64(c.mw.sldMouse.Value()) / 100
+	if err := writeD3DSettings(&c.mw.cfg); err != nil {
+		c.mw.setStatus(err.Error())
+	}
+}
+
+const capWidth, capHeight = 170, 26
 
 func (c *controlsView) capWidget(i int) Widget {
 	return CustomWidget{
@@ -455,7 +464,7 @@ func (c *controlsView) paintCap(cv *walk.Canvas, i int) error {
 	w := c.caps[i]
 	b := w.ClientBoundsPixels()
 	px := w.IntFrom96DPI
-	cv.FillRectanglePixels(brushOf(colPanel()), b)
+	cv.FillRectanglePixels(brushOf(colCard), b)
 	dpi := w.DPI()
 	if c.capture == i {
 		cv.DrawImageStretchedPixels(c.glyphs.keycap(b.Width, b.Height, dpi, true), b)
@@ -613,6 +622,8 @@ func (c *controlsView) retranslate() {
 	c.presets[0].SetText(tr("ctl.presetWASD"))
 	c.presets[1].SetText(tr("ctl.presetClassic"))
 	c.hint.SetText(tr("ctl.hint"))
+	c.cardTitles[0].SetText(tr("ctl.cardFly"))
+	c.cardTitles[1].SetText(tr("ctl.cardMore"))
 	c.invalidateAll()
 }
 
