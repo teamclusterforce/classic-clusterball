@@ -548,6 +548,9 @@ func (mw *AppWindow) build() error {
 
 	mw.refreshHostList()
 	go mw.autoRefreshHosts()
+	if mw.cfg.UpdateCheck {
+		go mw.checkForUpdate() // update.go
+	}
 	return nil
 }
 

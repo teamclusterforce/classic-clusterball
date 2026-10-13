@@ -191,6 +191,11 @@ replaces the old `XDreamCC.ini`. Screenshots are at the
   writes the key names in `config.cfg` in that language, since the game only
   knows the names of its current language (`Language` in
   `clusterball_d3d.ini`)
+- Update check: on start the launcher asks GitHub for the latest release; when
+  its tag (e.g. `v3.1`) is newer than the launcher's own version and an `.msi`
+  is attached, it offers to download it (checked against size and SHA-256),
+  starts the installer and closes. `update_check=0` in `clusterball.ini`
+  turns it off
 
 ### Installation
 

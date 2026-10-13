@@ -33,6 +33,7 @@ type AppConfig struct {
 	HostlistDuration int
 	ClampTexture     bool
 	BlobbMode        bool
+	UpdateCheck      bool // beim Start nach einer neuen MSI auf GitHub fragen, siehe update.go
 
 	// Grafik des Spiels – Quelle ist die config.cfg neben der Clusterball.exe
 	Depth            int // Farbtiefe, fest auf gameDepth
@@ -65,6 +66,7 @@ var defaultConfig = AppConfig{
 	UseExternalIP:    true,
 	ClampTexture:     true,
 	BlobbMode:        false,
+	UpdateCheck:      true,
 
 	// Empfohlene Bildqualität: alles an, was die Darstellung verbessert.
 	// Die Farbtiefe steht fest, siehe gameDepth.
@@ -209,6 +211,8 @@ func readAppConfigFrom(cfg *AppConfig, path string) {
 			cfg.OwnIP = v
 		case "use_external_ip":
 			cfg.UseExternalIP = v == "1"
+		case "update_check":
+			cfg.UpdateCheck = v == "1"
 		case "language":
 			cfg.Language = v
 		case "account_name":
@@ -306,6 +310,7 @@ func writeConfig(cfg *AppConfig, path string) error {
 	fmt.Fprintf(w, "own_ip=%s\n", cfg.OwnIP)
 	fmt.Fprintf(w, "use_external_ip=%s\n", boolStr(cfg.UseExternalIP))
 	fmt.Fprintf(w, "language=%s\n", cfg.Language)
+	fmt.Fprintf(w, "update_check=%s\n", boolStr(cfg.UpdateCheck))
 	fmt.Fprintf(w, "account_name=%s\n", cfg.AccountName)
 	fmt.Fprintf(w, "account_password=%s\n", cfg.AccountPassword)
 	fmt.Fprintf(w, "hotkey_minimize=%d\n", cfg.HotkeyMinimize)
